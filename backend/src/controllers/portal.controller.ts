@@ -180,14 +180,18 @@ export const addPortalComment = async (req: Request, res: Response): Promise<voi
     quotationId: id,
     lineId: comment.lineId,
     author: comment.author,
+    authorType: 'CUSTOMER',
     message: comment.message,
     createdAt: comment.createdAt,
   };
 
   // Push real-time event to everyone viewing this quotation
   try {
-    getIO()?.to(`quotation:${id}`).emit('new-comment', payload);
-    getIO()?.to(`quotation:${id}`).emit('new-message', payload);
+    const io = getIO();
+    if (io) {
+      io.to(`quotation:${id}`).emit('new-message', payload);
+      io.to(`quotation:${id}`).emit('new-comment', payload);
+    }
   } catch (err) {
     console.error('[Socket.io] Failed to emit comment event:', err);
   }
@@ -275,7 +279,7 @@ export const counterDiscount = async (req: Request, res: Response): Promise<void
     newQuotationStatus = QuotationStatus.APPROVED;
   }
 
-  await prisma.$transaction(async (tx) => {
+  const txResult = await prisma.$transaction(async (tx) => {
     // Update line
     if (targetLineId) {
       const targetLine = calculatedLines.find((l) => l.id === targetLineId);
@@ -344,7 +348,7 @@ export const counterDiscount = async (req: Request, res: Response): Promise<void
     });
 
     // Also record portal comment
-    await tx.portalComment.create({
+    const createdComment = await tx.portalComment.create({
       data: {
         quotationId: id,
         lineId: targetLineId || null,
@@ -352,27 +356,49 @@ export const counterDiscount = async (req: Request, res: Response): Promise<void
         message: `Proposed counter-discount: ${proposedDiscountPercent}%. Reason: ${justification}`,
       },
     });
+
+    return { createdComment };
   });
 
-  // Push real-time event to everyone viewing this quotation
+  // Push real-time events to everyone viewing this quotation
   try {
-    const payload = {
-      quotationId: id,
-      lineId: targetLineId || null,
-      author: req.customer?.email || 'Customer',
-      message: `Proposed counter-discount: ${proposedDiscountPercent}%. Reason: ${justification}`,
-      createdAt: new Date(),
-    };
-    getIO()?.to(`quotation:${id}`).emit('new-comment', payload);
-    getIO()?.to(`quotation:${id}`).emit('new-message', payload);
-    getIO()?.to(`quotation:${id}`).emit('quotation-updated', {
-      quotationId: id,
-      status: newQuotationStatus,
-      blendedRiskScore,
-      reenteredApproval,
-    });
+    const io = getIO();
+    if (io) {
+      const messagePayload = {
+        id: txResult.createdComment.id,
+        quotationId: id,
+        lineId: txResult.createdComment.lineId,
+        author: txResult.createdComment.author,
+        authorType: 'CUSTOMER',
+        message: txResult.createdComment.message,
+        createdAt: txResult.createdComment.createdAt,
+      };
+
+      io.to(`quotation:${id}`).emit('new-message', messagePayload);
+      io.to(`quotation:${id}`).emit('new-comment', messagePayload);
+
+      io.to(`quotation:${id}`).emit('counter-discount-proposed', {
+        lineId: targetLineId || null,
+        proposedDiscountPercent,
+        justification,
+        newBlendedRiskScore: blendedRiskScore,
+        requiresApproval: reenteredApproval,
+      });
+
+      io.to(`quotation:${id}`).emit('quotation-status-changed', {
+        quotationId: id,
+        newStatus: newQuotationStatus,
+      });
+
+      io.to(`quotation:${id}`).emit('quotation-updated', {
+        quotationId: id,
+        status: newQuotationStatus,
+        blendedRiskScore,
+        reenteredApproval,
+      });
+    }
   } catch (err) {
-    console.error('[Socket.io] Failed to emit counterDiscount event:', err);
+    console.error('[Socket.io] Failed to emit counterDiscount events:', err);
   }
 
   res.status(200).json({
@@ -446,6 +472,23 @@ export const acceptPortalQuotation = async (req: Request, res: Response): Promis
       },
     });
   });
+
+  // Broadcast real-time status update
+  try {
+    const io = getIO();
+    if (io) {
+      io.to(`quotation:${id}`).emit('quotation-status-changed', {
+        quotationId: id,
+        newStatus: 'CONFIRMED',
+      });
+      io.to(`quotation:${id}`).emit('quotation-updated', {
+        quotationId: id,
+        status: 'CONFIRMED',
+      });
+    }
+  } catch (err) {
+    console.error('[Socket.io] Failed to emit accept status event:', err);
+  }
 
   res.status(200).json({
     quotationStatus: 'CONFIRMED',

@@ -18,6 +18,7 @@ router.get('/quotations', asyncHandler(getPortalQuotations));
 router.get('/quotations/:id', asyncHandler(getPortalQuotationById));
 router.get('/quotations/:id/pdf', asyncHandler(getPortalQuotationPdf));
 router.post('/quotations/:id/comments', asyncHandler(addPortalComment));
+router.post('/quotations/:id/messages', asyncHandler(addPortalComment));
 router.post('/quotations/:id/counter-discount', asyncHandler(counterDiscount));
 router.post('/quotations/:id/confirm', asyncHandler(acceptPortalQuotation));
 

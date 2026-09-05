@@ -571,6 +571,24 @@ export const submitForApproval = async (req: Request, res: Response): Promise<vo
     include: detailInclude,
   });
 
+  if (updatedQuotation) {
+    try {
+      const io = getIO();
+      if (io) {
+        io.to(`quotation:${id}`).emit('quotation-status-changed', {
+          quotationId: id,
+          newStatus: updatedQuotation.status,
+        });
+        io.to(`quotation:${id}`).emit('quotation-updated', {
+          quotationId: id,
+          status: updatedQuotation.status,
+        });
+      }
+    } catch (err) {
+      console.error('[Socket.io] Failed to emit status event:', err);
+    }
+  }
+
   res.status(200).json(formatQuotationDetail(updatedQuotation));
 };
 
@@ -722,13 +740,17 @@ export const addQuotationComment = async (req: Request, res: Response): Promise<
     quotationId: id,
     lineId: comment.lineId,
     author: comment.author,
+    authorType: 'INTERNAL',
     message: comment.message,
     createdAt: comment.createdAt,
   };
 
   try {
-    getIO()?.to(`quotation:${id}`).emit('new-comment', payload);
-    getIO()?.to(`quotation:${id}`).emit('new-message', payload);
+    const io = getIO();
+    if (io) {
+      io.to(`quotation:${id}`).emit('new-message', payload);
+      io.to(`quotation:${id}`).emit('new-comment', payload);
+    }
   } catch (err) {
     console.error('[Socket.io] Failed to emit comment event:', err);
   }

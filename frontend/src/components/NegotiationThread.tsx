@@ -19,6 +19,7 @@ interface NegotiationThreadProps {
   isPortal?: boolean;
   currentUserEmail?: string;
   currentUserName?: string;
+  onStatusChanged?: (data: { quotationId: string; newStatus: string }) => void;
 }
 
 export const NegotiationThread: React.FC<NegotiationThreadProps> = ({
@@ -28,6 +29,7 @@ export const NegotiationThread: React.FC<NegotiationThreadProps> = ({
   isPortal = false,
   currentUserEmail,
   currentUserName,
+  onStatusChanged,
 }) => {
   const [comments, setComments] = useState<CommentMessage[]>(initialComments);
   const [inputText, setInputText] = useState('');
@@ -65,12 +67,17 @@ export const NegotiationThread: React.FC<NegotiationThreadProps> = ({
           return [...prev, newComment];
         });
       },
+      onStatusChanged: (data: any) => {
+        if (onStatusChanged) {
+          onStatusChanged(data);
+        }
+      },
     });
 
     return () => {
       unsubscribe();
     };
-  }, [quotationId, token]);
+  }, [quotationId, token, onStatusChanged]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -132,6 +139,30 @@ export const NegotiationThread: React.FC<NegotiationThreadProps> = ({
           </div>
         ) : (
           comments.map((comment) => {
+            const isCounterOffer = (comment.message || '').includes('Proposed counter-discount:');
+
+            if (isCounterOffer) {
+              return (
+                <div
+                  key={comment.id || `${comment.createdAt}-${comment.author}`}
+                  className="w-full my-2 p-3.5 bg-gradient-to-r from-amber-50 via-orange-50/70 to-amber-50 border border-amber-200 rounded-2xl shadow-2xs text-xs space-y-1.5"
+                >
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="font-bold text-amber-900 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                      ⚡ Counter-Discount Proposal ({comment.author})
+                    </span>
+                    <span className="text-amber-700 font-mono text-[10px]">
+                      {new Date(comment.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                  <p className="text-xs text-amber-950 font-medium leading-relaxed bg-white/80 p-2.5 rounded-xl border border-amber-100">
+                    {comment.message}
+                  </p>
+                </div>
+              );
+            }
+
             const authorLower = (comment.author || '').toLowerCase();
             const isMe = isPortal
               ? authorLower.includes('customer') || (currentUserEmail && authorLower.includes(currentUserEmail.toLowerCase()))

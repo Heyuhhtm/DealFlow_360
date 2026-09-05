@@ -38,6 +38,8 @@ export interface JoinQuotationOptions {
   token: string;
   onCommentReceived?: (comment: any) => void;
   onQuotationUpdated?: (data: any) => void;
+  onCounterDiscountProposed?: (data: any) => void;
+  onStatusChanged?: (data: any) => void;
 }
 
 /**
@@ -49,6 +51,8 @@ export const subscribeToQuotation = ({
   token,
   onCommentReceived,
   onQuotationUpdated,
+  onCounterDiscountProposed,
+  onStatusChanged,
 }: JoinQuotationOptions): (() => void) => {
   const s = getSocket();
 
@@ -68,14 +72,30 @@ export const subscribeToQuotation = ({
     }
   };
 
+  const handleCounter = (data: any) => {
+    if (onCounterDiscountProposed) {
+      onCounterDiscountProposed(data);
+    }
+  };
+
+  const handleStatus = (data: any) => {
+    if (onStatusChanged && (!data.quotationId || data.quotationId === quotationId)) {
+      onStatusChanged(data);
+    }
+  };
+
   s.on('new-comment', handleComment);
   s.on('new-message', handleComment);
   s.on('quotation-updated', handleUpdate);
+  s.on('counter-discount-proposed', handleCounter);
+  s.on('quotation-status-changed', handleStatus);
 
   return () => {
     s.emit('leave-quotation', { quotationId });
     s.off('new-comment', handleComment);
     s.off('new-message', handleComment);
     s.off('quotation-updated', handleUpdate);
+    s.off('counter-discount-proposed', handleCounter);
+    s.off('quotation-status-changed', handleStatus);
   };
 };

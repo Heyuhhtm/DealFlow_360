@@ -39,6 +39,7 @@ router.post('/:id/submit-for-approval', asyncHandler(submitForApproval));
 router.get('/:id/pdf', asyncHandler(getQuotationPdf));
 router.post('/:id/send-email', asyncHandler(emailQuotationToCustomer));
 router.post('/:id/comments', asyncHandler(addQuotationComment));
+router.post('/:id/messages', asyncHandler(addQuotationComment));
 
 // Approval & Audit Trail
 router.get('/:id/approvals', asyncHandler(getApprovals));

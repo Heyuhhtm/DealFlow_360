@@ -1247,6 +1247,12 @@ export const QuotationsPage: React.FC = () => {
                   isPortal={false}
                   currentUserEmail={user?.email}
                   currentUserName={user?.name}
+                  onStatusChanged={(data: { quotationId: string; newStatus: string }) => {
+                    setSelectedQuotation((prev) => (prev ? { ...prev, status: data.newStatus as any } : prev));
+                    setQuotations((prev) =>
+                      prev.map((q) => (q.id === data.quotationId ? { ...q, status: data.newStatus as any } : q))
+                    );
+                  }}
                 />
               </div>
             </div>

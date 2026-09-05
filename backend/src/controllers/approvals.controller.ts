@@ -3,6 +3,7 @@ import prisma from '../lib/prisma';
 import { AppError } from '../lib/errors';
 import { z } from 'zod';
 import { ApprovalStatus, QuotationStatus } from '@prisma/client';
+import { getIO } from '../lib/socket';
 
 export const approvalActionSchema = z.object({
   action: z.enum(['APPROVE', 'REJECT', 'RETURN']),
@@ -166,6 +167,23 @@ export const takeApprovalAction = async (req: Request, res: Response): Promise<v
       quotationStatus: nextQuotationStatus,
     };
   });
+
+  // Broadcast real-time status update to both staff and customer portal
+  try {
+    const io = getIO();
+    if (io) {
+      io.to(`quotation:${id}`).emit('quotation-status-changed', {
+        quotationId: id,
+        newStatus: result.quotationStatus,
+      });
+      io.to(`quotation:${id}`).emit('quotation-updated', {
+        quotationId: id,
+        status: result.quotationStatus,
+      });
+    }
+  } catch (err) {
+    console.error('[Socket.io] Failed to emit approval action status event:', err);
+  }
 
   res.status(200).json(result);
 };

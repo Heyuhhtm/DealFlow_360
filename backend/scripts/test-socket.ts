@@ -254,11 +254,11 @@ async function runSocketTests() {
     }, 6000);
   });
 
-  // ================= TEST 5: REST API trigger pushes to Socket.io =================
-  console.log('\n--- TEST 5: REST POST /comments pushes to Socket room ---');
+  // ================= TEST 5: REST POST /messages (Internal) pushes with authorType: INTERNAL =================
+  console.log('\n--- TEST 5: REST POST /api/quotations/:id/messages pushes authorType: INTERNAL ---');
   await new Promise<void>((resolve, reject) => {
     const listenerSocket = Client(SERVER_URL, { reconnection: false });
-    const restMsgText = `REST posted message ${Date.now()}`;
+    const internalMsgText = `Internal rep message ${Date.now()}`;
 
     listenerSocket.on('connect', () => {
       listenerSocket.emit('authenticate', { token: internalToken });
@@ -269,14 +269,14 @@ async function runSocketTests() {
     });
 
     listenerSocket.on('joined-quotation', async () => {
-      console.log('Listener joined room. Posting message via REST API...');
+      console.log('Listener joined room. Calling POST /api/quotations/:id/messages...');
       try {
         await axios.post(
-          `${SERVER_URL}/api/quotations/${quotationId}/comments`,
-          { message: restMsgText },
+          `${SERVER_URL}/api/quotations/${quotationId}/messages`,
+          { message: internalMsgText },
           { headers: { Authorization: `Bearer ${internalToken}` } }
         );
-        console.log('REST POST /api/quotations/:id/comments returned 201.');
+        console.log('REST POST /api/quotations/:id/messages returned 201.');
       } catch (err: any) {
         listenerSocket.disconnect();
         reject(err);
@@ -284,20 +284,142 @@ async function runSocketTests() {
     });
 
     listenerSocket.on('new-message', (data) => {
-      if (data.message === restMsgText) {
-        console.log('✅ Socket listener successfully received real-time broadcast from REST API call!');
-        listenerSocket.disconnect();
-        resolve();
+      if (data.message === internalMsgText) {
+        console.log('✅ Received new-message with authorType:', data.authorType);
+        if (data.authorType === 'INTERNAL' && data.quotationId === quotationId) {
+          listenerSocket.disconnect();
+          resolve();
+        } else {
+          listenerSocket.disconnect();
+          reject(new Error(`authorType expected INTERNAL, got ${data.authorType}`));
+        }
       }
     });
 
     setTimeout(() => {
       listenerSocket.disconnect();
-      reject(new Error('Timeout waiting for REST-to-Socket broadcast'));
+      reject(new Error('Timeout waiting for internal message broadcast'));
     }, 6000);
   });
 
-  console.log('\n🎉 ALL SOCKET.IO REAL-TIME MESSAGING TESTS PASSED WITH 100% SUCCESS!\n');
+  // ================= TEST 6: REST POST /api/portal/quotations/:id/comments pushes authorType: CUSTOMER =================
+  console.log('\n--- TEST 6: REST POST /api/portal/quotations/:id/comments pushes authorType: CUSTOMER ---');
+  await new Promise<void>((resolve, reject) => {
+    const listenerSocket = Client(SERVER_URL, { reconnection: false });
+    const portalMsgText = `Customer negotiation note ${Date.now()}`;
+
+    listenerSocket.on('connect', () => {
+      listenerSocket.emit('authenticate', { token: validPortalToken });
+    });
+
+    listenerSocket.on('authenticated', () => {
+      listenerSocket.emit('join-quotation', { quotationId: quotationId });
+    });
+
+    listenerSocket.on('joined-quotation', async () => {
+      console.log('Customer listener joined room. Calling POST /api/portal/quotations/:id/comments...');
+      try {
+        await axios.post(
+          `${SERVER_URL}/api/portal/quotations/${quotationId}/comments`,
+          { message: portalMsgText },
+          { headers: { Authorization: `Bearer ${validPortalToken}` } }
+        );
+        console.log('REST POST /api/portal/quotations/:id/comments returned 201.');
+      } catch (err: any) {
+        listenerSocket.disconnect();
+        reject(err);
+      }
+    });
+
+    listenerSocket.on('new-message', (data) => {
+      if (data.message === portalMsgText) {
+        console.log('✅ Received new-message with authorType:', data.authorType);
+        if (data.authorType === 'CUSTOMER' && data.quotationId === quotationId) {
+          listenerSocket.disconnect();
+          resolve();
+        } else {
+          listenerSocket.disconnect();
+          reject(new Error(`authorType expected CUSTOMER, got ${data.authorType}`));
+        }
+      }
+    });
+
+    setTimeout(() => {
+      listenerSocket.disconnect();
+      reject(new Error('Timeout waiting for customer message broadcast'));
+    }, 6000);
+  });
+
+  // ================= TEST 7: POST /counter-discount emits counter-discount-proposed & quotation-status-changed =================
+  console.log('\n--- TEST 7: POST /counter-discount emits counter-discount-proposed & quotation-status-changed ---');
+  await new Promise<void>((resolve, reject) => {
+    const listenerSocket = Client(SERVER_URL, { reconnection: false });
+    let gotCounterEvent = false;
+    let gotStatusEvent = false;
+
+    const checkDone = () => {
+      if (gotCounterEvent && gotStatusEvent) {
+        console.log('✅ Both counter-discount-proposed AND quotation-status-changed received in real time!');
+        listenerSocket.disconnect();
+        resolve();
+      }
+    };
+
+    listenerSocket.on('connect', () => {
+      listenerSocket.emit('authenticate', { token: internalToken });
+    });
+
+    listenerSocket.on('authenticated', () => {
+      listenerSocket.emit('join-quotation', { quotationId: quotationId });
+    });
+
+    listenerSocket.on('joined-quotation', async () => {
+      console.log('Listener joined room. Calling POST /api/portal/quotations/:id/counter-discount...');
+      try {
+        await axios.post(
+          `${SERVER_URL}/api/portal/quotations/${quotationId}/counter-discount`,
+          {
+            proposedDiscountPercent: 12,
+            justification: 'Real-time WebSocket counter-discount integration test',
+          },
+          { headers: { Authorization: `Bearer ${validPortalToken}` } }
+        );
+        console.log('REST POST /counter-discount returned 200.');
+      } catch (err: any) {
+        listenerSocket.disconnect();
+        reject(err);
+      }
+    });
+
+    listenerSocket.on('counter-discount-proposed', (data) => {
+      console.log('✅ Received counter-discount-proposed:', data);
+      if (data.proposedDiscountPercent === 12 && data.justification) {
+        gotCounterEvent = true;
+        checkDone();
+      }
+    });
+
+    listenerSocket.on('quotation-status-changed', (data) => {
+      console.log('✅ Received quotation-status-changed:', data);
+      if (data.quotationId === quotationId && data.newStatus) {
+        gotStatusEvent = true;
+        checkDone();
+      }
+    });
+
+    setTimeout(() => {
+      listenerSocket.disconnect();
+      if (!gotCounterEvent || !gotStatusEvent) {
+        reject(
+          new Error(
+            `Timeout in Test 7. CounterEvent: ${gotCounterEvent}, StatusEvent: ${gotStatusEvent}`
+          )
+        );
+      }
+    }, 7000);
+  });
+
+  console.log('\n🎉 ALL REAL-TIME EVENT BROADCAST TESTS PASSED WITH 100% SUCCESS!\n');
   process.exit(0);
 }
 
