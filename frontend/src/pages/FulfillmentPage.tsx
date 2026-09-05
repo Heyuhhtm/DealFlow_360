@@ -188,7 +188,16 @@ export const FulfillmentPage: React.FC = () => {
       setShowConfirmModal(false);
       setShowManualOverrideModal(false);
       setManualAllocations([]);
-      setStatusMessage('✅ Warehouse fulfillment split confirmed & locked to database!');
+
+      // Reload live warehouse stock and quotations list so the real-time stock table reflects the newly deducted units immediately
+      const [updatedWarehouses, updatedQuotations] = await Promise.all([
+        warehousesApi.list(),
+        quotationsApi.list(),
+      ]);
+      setWarehouses(updatedWarehouses);
+      setQuotations(updatedQuotations);
+
+      setStatusMessage('✅ Warehouse fulfillment split confirmed & stock reserved from inventory!');
     } catch (err: any) {
       setStatusMessage(err.response?.data?.error?.message || 'Failed to confirm fulfillment');
     } finally {

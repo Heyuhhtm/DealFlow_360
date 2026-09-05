@@ -6,6 +6,7 @@ import { calculateLineTotal, calculateOrderTotals, calculateOrderMargin } from '
 import { calculateBlendedRiskScore, determineApprovalRequirements } from '../services/risk.service';
 import { QuotationStatus, ApprovalRole, ApprovalStatus } from '@prisma/client';
 import { generateQuotationPDF } from '../services/pdf.service';
+import { calculateWarehouseSplit } from '../services/fulfillment.service';
 import { getIO } from '../lib/socket';
 
 export const portalCommentSchema = z.object({
@@ -418,6 +419,10 @@ export const acceptPortalQuotation = async (req: Request, res: Response): Promis
 
   const quotation = await prisma.quotation.findUnique({
     where: { id },
+    include: {
+      lines: true,
+      warehouseSplits: true,
+    },
   });
 
   if (!quotation) {
@@ -455,6 +460,7 @@ export const acceptPortalQuotation = async (req: Request, res: Response): Promis
   }
 
   await prisma.$transaction(async (tx) => {
+    // 1. Confirm quotation status
     await tx.quotation.update({
       where: { id },
       data: {
@@ -463,12 +469,101 @@ export const acceptPortalQuotation = async (req: Request, res: Response): Promis
       },
     });
 
+    // 2. Reserve & deduct warehouse inventory if not already done
+    const priorReservation = await tx.auditLogEntry.findFirst({
+      where: {
+        quotationId: id,
+        action: 'STOCK_RESERVED',
+      },
+    });
+
+    if (!priorReservation) {
+      const warehouses = await tx.warehouse.findMany({
+        include: { stock: true },
+        orderBy: { shippingCostBase: 'asc' },
+      });
+
+      const linesInput = quotation.lines.map((l) => ({
+        productId: l.productId,
+        quantity: l.quantity,
+      }));
+
+      const warehouseInput = warehouses.map((w) => ({
+        id: w.id,
+        name: w.name,
+        shippingCostBase: w.shippingCostBase,
+        stock: w.stock.map((s) => ({
+          productId: s.productId,
+          quantity: s.quantity,
+        })),
+      }));
+
+      const { splits } = calculateWarehouseSplit(linesInput, warehouseInput);
+
+      // If splits were not created yet, persist them
+      if (quotation.warehouseSplits.length === 0) {
+        for (const split of splits) {
+          const totalUnits = split.lines.reduce((acc, l) => acc + l.quantity, 0);
+          await tx.warehouseSplit.create({
+            data: {
+              quotationId: id,
+              warehouseId: split.warehouseId,
+              quantityFulfilled: totalUnits,
+              estimatedShipmentCost: split.estimatedShipmentCost,
+            },
+          });
+        }
+      }
+
+      // Deduct warehouse stock for each line fulfilled
+      for (const split of splits) {
+        for (const line of split.lines) {
+          const stockRecord = await tx.warehouseStock.findUnique({
+            where: {
+              warehouseId_productId: {
+                warehouseId: split.warehouseId,
+                productId: line.productId,
+              },
+            },
+          });
+
+          if (stockRecord) {
+            await tx.warehouseStock.update({
+              where: {
+                warehouseId_productId: {
+                  warehouseId: split.warehouseId,
+                  productId: line.productId,
+                },
+              },
+              data: {
+                quantity: Math.max(0, stockRecord.quantity - line.quantity),
+              },
+            });
+          }
+        }
+      }
+
+      await tx.auditLogEntry.create({
+        data: {
+          quotationId: id,
+          userId: quotation.repId,
+          action: 'STOCK_RESERVED',
+          detail: JSON.stringify(
+            splits.map((s) => ({
+              warehouseId: s.warehouseId,
+              lines: s.lines,
+            }))
+          ),
+        },
+      });
+    }
+
     await tx.auditLogEntry.create({
       data: {
         quotationId: id,
         userId: quotation.repId,
         action: 'PORTAL_CONFIRMED',
-        detail: `Quotation accepted and confirmed by customer (${req.customer?.email || 'Customer'})`,
+        detail: `Quotation accepted and confirmed by customer (${req.customer?.email || 'Customer'}). Inventory stock reserved.`,
       },
     });
   });

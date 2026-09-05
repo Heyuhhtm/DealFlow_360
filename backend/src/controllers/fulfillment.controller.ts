@@ -138,12 +138,59 @@ export const confirmFulfillment = async (req: Request, res: Response): Promise<v
 
   // Persist into database in transaction
   await prisma.$transaction(async (tx) => {
-    // Delete existing splits
+    // 1. If stock was previously reserved for this quotation, replenish it before applying new split
+    const priorReservation = await tx.auditLogEntry.findFirst({
+      where: {
+        quotationId: id,
+        action: 'STOCK_RESERVED',
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (priorReservation && priorReservation.detail) {
+      try {
+        const previousAllocations: {
+          warehouseId: string;
+          lines: { productId: string; quantity: number }[];
+        }[] = JSON.parse(priorReservation.detail);
+
+        for (const prevSplit of previousAllocations) {
+          for (const line of prevSplit.lines) {
+            const stockRecord = await tx.warehouseStock.findUnique({
+              where: {
+                warehouseId_productId: {
+                  warehouseId: prevSplit.warehouseId,
+                  productId: line.productId,
+                },
+              },
+            });
+
+            if (stockRecord) {
+              await tx.warehouseStock.update({
+                where: {
+                  warehouseId_productId: {
+                    warehouseId: prevSplit.warehouseId,
+                    productId: line.productId,
+                  },
+                },
+                data: {
+                  quantity: stockRecord.quantity + line.quantity,
+                },
+              });
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('[Fulfillment] Could not parse prior reservation details:', e);
+      }
+    }
+
+    // 2. Delete existing splits
     await tx.warehouseSplit.deleteMany({
       where: { quotationId: id },
     });
 
-    // Create new splits
+    // 3. Create new splits and decrement warehouse stock
     for (const split of splitsToPersist) {
       const totalUnits = split.lines.reduce((acc, l) => acc + l.quantity, 0);
       await tx.warehouseSplit.create({
@@ -154,15 +201,57 @@ export const confirmFulfillment = async (req: Request, res: Response): Promise<v
           estimatedShipmentCost: split.estimatedShipmentCost,
         },
       });
+
+      // Deduct allocated units directly from warehouse stock
+      for (const line of split.lines) {
+        const stockRecord = await tx.warehouseStock.findUnique({
+          where: {
+            warehouseId_productId: {
+              warehouseId: split.warehouseId,
+              productId: line.productId,
+            },
+          },
+        });
+
+        if (stockRecord) {
+          const newQty = Math.max(0, stockRecord.quantity - line.quantity);
+          await tx.warehouseStock.update({
+            where: {
+              warehouseId_productId: {
+                warehouseId: split.warehouseId,
+                productId: line.productId,
+              },
+            },
+            data: {
+              quantity: newQty,
+            },
+          });
+        }
+      }
     }
 
-    // Write audit entry
+    // 4. Record stock reservation audit entry
+    await tx.auditLogEntry.create({
+      data: {
+        quotationId: id,
+        userId,
+        action: 'STOCK_RESERVED',
+        detail: JSON.stringify(
+          splitsToPersist.map((s) => ({
+            warehouseId: s.warehouseId,
+            lines: s.lines,
+          }))
+        ),
+      },
+    });
+
+    // 5. Write fulfillment confirmation audit entry
     await tx.auditLogEntry.create({
       data: {
         quotationId: id,
         userId,
         action: 'FULFILLMENT_CONFIRMED',
-        detail: `Fulfillment split confirmed (${isManual ? 'Manual Override' : 'Auto-Calculated'}). Warehouses used: ${splitsToPersist.length}`,
+        detail: `Fulfillment split confirmed (${isManual ? 'Manual Override' : 'Auto-Calculated'}). Warehouses used: ${splitsToPersist.length}. Stock reserved & deducted from inventory.`,
       },
     });
 
