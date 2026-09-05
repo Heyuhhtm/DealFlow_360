@@ -223,10 +223,18 @@ export const counterDiscount = async (req: Request, res: Response): Promise<void
     targetLineId = quotation.lines[0].id;
   }
 
+  const CUSTOMER_TIER_CEILINGS: Record<string, number> = {
+    BRONZE: 5,
+    SILVER: 10,
+    GOLD: 15,
+  };
+  const tierCeiling = quotation.customer ? (CUSTOMER_TIER_CEILINGS[quotation.customer.tier] ?? 15) : 15;
+
   const calculatedLines = quotation.lines.map((l) => {
     const isTarget = l.id === targetLineId;
     const discountPercent = isTarget ? proposedDiscountPercent : l.discountPercent;
     const lineTotal = calculateLineTotal(l.quantity, l.unitPrice, discountPercent);
+    const effectiveCeiling = Math.min(tierCeiling, l.product.discountCeiling);
     return {
       id: l.id,
       productId: l.productId,
@@ -235,7 +243,7 @@ export const counterDiscount = async (req: Request, res: Response): Promise<void
       discountPercent,
       lineTotal,
       marginPercent: l.product.marginPercent,
-      discountCeiling: l.product.discountCeiling,
+      discountCeiling: effectiveCeiling,
     };
   });
 

@@ -53,6 +53,17 @@ export const QuotationsPage: React.FC = () => {
 
   const [submitForApproval, setSubmitForApproval] = useState(false);
   const [upsellSuggestions, setUpsellSuggestions] = useState<any[]>([]);
+  const [orderDiscount, setOrderDiscount] = useState<number | ''>('');
+
+  const handleApplyOrderDiscount = (percent: number) => {
+    setOrderDiscount(percent);
+    setFormLines((prev) =>
+      prev.map((line) => ({
+        ...line,
+        discountPercent: percent,
+      }))
+    );
+  };
 
   // Load initial quotes & products & real customers
   const fetchQuotations = async () => {
@@ -131,6 +142,9 @@ export const QuotationsPage: React.FC = () => {
   let totalWeightedOverage = 0;
   let totalWeight = 0;
 
+  const selectedCust = customers.find((c) => c.id === selectedCustomerId);
+  const activeCustomerTierCeiling = selectedCust?.tier === 'GOLD' ? 15 : selectedCust?.tier === 'SILVER' ? 10 : 5;
+
   formLines.forEach((l) => {
     const p = productMap.get(l.productId);
     if (!p) return;
@@ -139,7 +153,9 @@ export const QuotationsPage: React.FC = () => {
     liveSubtotal += lineGross;
     liveTotal += lineNet;
 
-    const overage = Math.max(0, l.discountPercent - p.discountCeiling);
+    // Effective ceiling is the stricter of customer tier ceiling and product category ceiling
+    const effectiveCeiling = Math.min(activeCustomerTierCeiling, p.discountCeiling);
+    const overage = Math.max(0, l.discountPercent - effectiveCeiling);
     totalWeightedOverage += overage * lineGross;
     totalWeight += lineGross;
   });
@@ -231,6 +247,7 @@ export const QuotationsPage: React.FC = () => {
     }
     const defaultProductId = prods.length > 0 ? prods[0].id : '';
     setFormLines([{ productId: defaultProductId, quantity: 1, discountPercent: 5 }]);
+    setOrderDiscount('');
     setSubmitForApproval(false);
     setCreateModalOpen(true);
   };
@@ -609,10 +626,61 @@ export const QuotationsPage: React.FC = () => {
                     >
                       {customers.map((c) => (
                         <option key={c.id} value={c.id}>
-                          {c.name} ({c.tier} Tier — Max {c.tier === 'GOLD' ? '15%' : c.tier === 'SILVER' ? '10%' : '5%'} ceiling)
+                          {c.name} ({c.tier} Tier — Max {c.tier === 'GOLD' ? '15%' : c.tier === 'SILVER' ? '10%' : '5%'} tier limit)
                         </option>
                       ))}
                     </select>
+                  </div>
+
+                  {/* Order-Level Discount Applicator (Section B3) */}
+                  <div className="p-4 bg-blue-50/70 border border-blue-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <span className="text-xs font-bold text-blue-950 flex items-center space-x-1.5">
+                        <Tag className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Order-Level Discount Applicator</span>
+                      </span>
+                      <span className="text-[11px] text-blue-700 block mt-0.5">
+                        Apply a uniform discount rate across all product lines on this quotation.
+                      </span>
+                    </div>
+
+                    <div className="flex items-center space-x-2 shrink-0">
+                      <div className="relative w-24">
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={orderDiscount}
+                          onChange={(e) => {
+                            const val = e.target.value === '' ? '' : Math.max(0, Math.min(100, parseFloat(e.target.value) || 0));
+                            setOrderDiscount(val);
+                            if (typeof val === 'number') {
+                              setFormLines((prev) => prev.map((l) => ({ ...l, discountPercent: val })));
+                            }
+                          }}
+                          placeholder="0"
+                          className="w-full pl-3 pr-6 py-1.5 bg-white border border-blue-300 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 font-mono"
+                        />
+                        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">%</span>
+                      </div>
+
+                      <div className="flex space-x-1">
+                        {[5, 10, 15, 20].map((preset) => (
+                          <button
+                            key={preset}
+                            type="button"
+                            onClick={() => handleApplyOrderDiscount(preset)}
+                            className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border transition ${
+                              orderDiscount === preset
+                                ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                                : 'bg-white hover:bg-blue-100 text-blue-800 border-blue-200'
+                            }`}
+                          >
+                            {preset}%
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
 
                   {/* Quotation Lines Section */}
@@ -634,8 +702,8 @@ export const QuotationsPage: React.FC = () => {
                     <div className="space-y-3">
                       {formLines.map((line, idx) => {
                         const prod = productMap.get(line.productId);
-                        const ceiling = prod?.discountCeiling || 15;
-                        const isExceeding = line.discountPercent > ceiling;
+                        const effectiveCeiling = Math.min(activeCustomerTierCeiling, prod?.discountCeiling || 15);
+                        const isExceeding = line.discountPercent > effectiveCeiling;
 
                         return (
                           <div
@@ -730,7 +798,7 @@ export const QuotationsPage: React.FC = () => {
                               <div className="mt-2 text-[11px] font-semibold text-amber-700 flex items-center space-x-1">
                                 <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                                 <span>
-                                  Exceeds category ceiling ({ceiling}%). Will trigger approval workflow!
+                                  Exceeds effective ceiling ({effectiveCeiling}% based on {selectedCust?.tier || 'Customer'} tier &amp; category limit). Triggers approval workflow!
                                 </span>
                               </div>
                             )}

@@ -149,6 +149,13 @@ export const createQuotation = async (req: Request, res: Response): Promise<void
 
   const productMap = new Map(products.map((p) => [p.id, p]));
 
+  const CUSTOMER_TIER_CEILINGS: Record<string, number> = {
+    BRONZE: 5,
+    SILVER: 10,
+    GOLD: 15,
+  };
+  const tierCeiling = customer ? (CUSTOMER_TIER_CEILINGS[customer.tier] ?? 15) : 15;
+
   // Validate each product exists & prepare calculations
   const calculatedLines = lines.map((line) => {
     const product = productMap.get(line.productId);
@@ -156,6 +163,8 @@ export const createQuotation = async (req: Request, res: Response): Promise<void
       throw new AppError(`Product ${line.productId} not found`, 400);
     }
     const lineTotal = calculateLineTotal(line.quantity, product.unitPrice, line.discountPercent);
+    // Effective ceiling is minimum of customer tier limit and product category limit
+    const effectiveCeiling = Math.min(tierCeiling, product.discountCeiling);
     return {
       productId: line.productId,
       quantity: line.quantity,
@@ -163,7 +172,7 @@ export const createQuotation = async (req: Request, res: Response): Promise<void
       discountPercent: line.discountPercent,
       lineTotal,
       marginPercent: product.marginPercent,
-      discountCeiling: product.discountCeiling,
+      discountCeiling: effectiveCeiling,
     };
   });
 
@@ -335,7 +344,7 @@ export const updateQuotation = async (req: Request, res: Response): Promise<void
 
   const existing = await prisma.quotation.findUnique({
     where: { id },
-    include: { lines: true },
+    include: { lines: true, customer: true },
   });
 
   if (!existing) {
@@ -354,12 +363,20 @@ export const updateQuotation = async (req: Request, res: Response): Promise<void
       });
       const productMap = new Map(products.map((p) => [p.id, p]));
 
+      const CUSTOMER_TIER_CEILINGS: Record<string, number> = {
+        BRONZE: 5,
+        SILVER: 10,
+        GOLD: 15,
+      };
+      const tierCeiling = existing?.customer ? (CUSTOMER_TIER_CEILINGS[existing.customer.tier] ?? 15) : 15;
+
       const calculatedLines = lines.map((line) => {
         const product = productMap.get(line.productId);
         if (!product) {
           throw new AppError(`Product ${line.productId} not found`, 400);
         }
         const lineTotal = calculateLineTotal(line.quantity, product.unitPrice, line.discountPercent);
+        const effectiveCeiling = Math.min(tierCeiling, product.discountCeiling);
         return {
           productId: line.productId,
           quantity: line.quantity,
@@ -367,7 +384,7 @@ export const updateQuotation = async (req: Request, res: Response): Promise<void
           discountPercent: line.discountPercent,
           lineTotal,
           marginPercent: product.marginPercent,
-          discountCeiling: product.discountCeiling,
+          discountCeiling: effectiveCeiling,
         };
       });
 
