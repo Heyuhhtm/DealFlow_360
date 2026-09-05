@@ -41,6 +41,60 @@ export type NavTab =
   | 'portal'
   | 'login';
 
+/**
+ * Role-Based Navigation Visibility Map
+ * - ADMIN: sees everything
+ * - SALES_MANAGER: sees Dashboard, Quotations, Approvals, Deal Health, Customers, Reports
+ * - FINANCE: sees Dashboard, Approvals, Invoices, Subscriptions, Reports
+ * - SALES_REP: sees Dashboard, Quotations, Fulfillment, Subscriptions, Deal Health
+ */
+export const ROLE_NAVIGATION_MAP: Record<UserRole, NavTab[]> = {
+  ADMIN: [
+    'dashboard',
+    'quotations',
+    'approvals',
+    'fulfillment',
+    'subscriptions',
+    'invoices',
+    'dealhealth',
+    'customers',
+    'warehouses',
+    'reports',
+    'products',
+  ],
+  SALES_MANAGER: [
+    'dashboard',
+    'quotations',
+    'approvals',
+    'dealhealth',
+    'customers',
+    'reports',
+  ],
+  FINANCE: [
+    'dashboard',
+    'approvals',
+    'invoices',
+    'subscriptions',
+    'reports',
+  ],
+  SALES_REP: [
+    'dashboard',
+    'quotations',
+    'fulfillment',
+    'subscriptions',
+    'dealhealth',
+  ],
+};
+
+/**
+ * Helper to get allowed roles for a given tab
+ */
+export const getRolesForTab = (tab: NavTab): UserRole[] => {
+  return (Object.keys(ROLE_NAVIGATION_MAP) as UserRole[]).filter((role) =>
+    ROLE_NAVIGATION_MAP[role].includes(tab)
+  );
+};
+
 interface SidebarProps {
   activeTab: NavTab;
   setActiveTab: (tab: NavTab) => void;
@@ -93,6 +147,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'products', label: 'Products', icon: <Package className="w-5 h-5 shrink-0" /> },
   ];
 
+  // Resolve current active role from AuthContext
+  const currentRole: UserRole =
+    (activeRole !== 'PORTAL' ? (activeRole as UserRole) : user?.role) || 'ADMIN';
+  const allowedTabs = ROLE_NAVIGATION_MAP[currentRole] || ROLE_NAVIGATION_MAP.ADMIN;
+
+  // Filter the rendered nav links based on the current user's role from AuthContext
+  const visibleNavItems = navItems.filter((item) => allowedTabs.includes(item.id));
+
+  // Safeguard: the sidebar should never render a broken or empty link list
+  const finalNavItems =
+    visibleNavItems.length > 0 ? visibleNavItems : navItems.filter((item) => item.id === 'dashboard');
+
   const getRoleInitials = () => {
     switch (activeRole) {
       case 'ADMIN':
@@ -132,8 +198,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
     await loginAsRole(role);
     if (role === 'PORTAL') {
       setActiveTab('portal');
-    } else if (role === 'SALES_MANAGER' || role === 'FINANCE') {
-      setActiveTab('approvals');
+    } else {
+      const allowed = ROLE_NAVIGATION_MAP[role] || ROLE_NAVIGATION_MAP.ADMIN;
+      if (!allowed.includes(activeTab)) {
+        setActiveTab('dashboard');
+      }
     }
   };
 
@@ -218,7 +287,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Middle Section: Navigation Links */}
         <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-1 scrollbar-thin scrollbar-thumb-blue-800">
-          {navItems.map((item) => {
+          {finalNavItems.map((item) => {
             const isActive = activeTab === item.id;
             return (
               <button
@@ -239,30 +308,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
             );
           })}
 
-          {/* Quick Portal Switcher Item */}
-          <div className="pt-2 border-t border-blue-900/60 my-2">
-            <button
-              onClick={() => handleNavClick('portal')}
-              title={collapsed ? 'Customer Portal (Deal Room)' : undefined}
-              className={`w-full flex items-center transition-all duration-150 rounded-xl ${
-                collapsed ? 'justify-center p-2.5' : 'px-3 py-2.5 space-x-3'
-              } ${
-                activeTab === 'portal'
-                  ? 'bg-emerald-600 text-white font-bold border-l-4 border-white shadow-sm'
-                  : 'text-emerald-300/90 hover:text-white hover:bg-emerald-950/60 font-medium'
-              }`}
-            >
-              <Globe className="w-5 h-5 shrink-0 text-emerald-400" />
-              {!collapsed && (
-                <div className="flex items-center justify-between flex-1 text-left">
-                  <span className="text-xs font-semibold">Customer Portal</span>
-                  <span className="text-[9px] bg-emerald-500/20 text-emerald-200 px-1.5 py-0.5 rounded font-bold uppercase">
-                    Live
-                  </span>
-                </div>
-              )}
-            </button>
-          </div>
+          {/* Quick Portal Switcher Item (Admin Demo) */}
+          {currentRole === 'ADMIN' && (
+            <div className="pt-2 border-t border-blue-900/60 my-2">
+              <button
+                onClick={() => handleNavClick('portal')}
+                title={collapsed ? 'Customer Portal (Deal Room)' : undefined}
+                className={`w-full flex items-center transition-all duration-150 rounded-xl ${
+                  collapsed ? 'justify-center p-2.5' : 'px-3 py-2.5 space-x-3'
+                } ${
+                  activeTab === 'portal'
+                    ? 'bg-emerald-600 text-white font-bold border-l-4 border-white shadow-sm'
+                    : 'text-emerald-300/90 hover:text-white hover:bg-emerald-950/60 font-medium'
+                }`}
+              >
+                <Globe className="w-5 h-5 shrink-0 text-emerald-400" />
+                {!collapsed && (
+                  <div className="flex items-center justify-between flex-1 text-left">
+                    <span className="text-xs font-semibold">Customer Portal</span>
+                    <span className="text-[9px] bg-emerald-500/20 text-emerald-200 px-1.5 py-0.5 rounded font-bold uppercase">
+                      Live
+                    </span>
+                  </div>
+                )}
+              </button>
+            </div>
+          )}
         </nav>
 
         {/* Bottom Section: Notifications & User Profile Popover */}

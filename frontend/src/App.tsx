@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Header } from './components/Header';
-import { Sidebar, NavTab } from './components/Sidebar';
+import { Sidebar, NavTab, ROLE_NAVIGATION_MAP, getRolesForTab } from './components/Sidebar';
+import { RoleGuard } from './components/RoleGuard';
 import { Footer } from './components/Footer';
 import { DashboardPage } from './pages/DashboardPage';
 import { QuotationsPage } from './pages/QuotationsPage';
@@ -35,6 +36,16 @@ const AppContent: React.FC = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Safeguard: If user's active role changes and they cannot access the current activeTab, return them to dashboard
+  useEffect(() => {
+    if (activeRole !== 'PORTAL') {
+      const allowed = ROLE_NAVIGATION_MAP[activeRole] || ROLE_NAVIGATION_MAP.ADMIN;
+      if (!allowed.includes(activeTab) && activeTab !== 'portal' && activeTab !== 'login') {
+        setActiveTab('dashboard');
+      }
+    }
+  }, [activeRole, activeTab]);
 
   if (loading) {
     return (
@@ -78,7 +89,7 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f8fafc]">
-      {/* Left Vertical Sidebar for all Internal Pages */}
+      {/* Left Vertical Sidebar for all Internal Pages (Filtered by user role) */}
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -93,7 +104,7 @@ const AppContent: React.FC = () => {
         <div className="flex items-center space-x-3">
           <button
             onClick={() => setMobileOpen(true)}
-            className="p-1.5 rounded-lg text-blue-200 hover:text-white hover:bg-blue-900/60 transition"
+            className="p-1.5 rounded-lg text-blue-200 hover:text-white hover:bg-blue-900/60 transition cursor-pointer"
             title="Open Navigation Menu"
           >
             <Menu className="w-6 h-6" />
@@ -121,17 +132,116 @@ const AppContent: React.FC = () => {
       >
         <main className="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {activeTab === 'login' && <LoginPage onLoginSuccess={() => setActiveTab('dashboard')} />}
-          {activeTab === 'dashboard' && <DashboardPage onNavigate={(tab) => setActiveTab(tab)} />}
-          {activeTab === 'quotations' && <QuotationsPage />}
-          {activeTab === 'approvals' && <ApprovalsPage />}
-          {activeTab === 'fulfillment' && <FulfillmentPage />}
-          {activeTab === 'subscriptions' && <SubscriptionsPage />}
-          {activeTab === 'invoices' && <InvoicesPage onNavigateTab={(tab: any) => setActiveTab(tab)} />}
-          {activeTab === 'dealhealth' && <DealHealthPage />}
-          {activeTab === 'customers' && <CustomersPage />}
-          {activeTab === 'warehouses' && <WarehousesPage />}
-          {activeTab === 'reports' && <ReportsPage />}
-          {activeTab === 'products' && <ProductsPage />}
+
+          {activeTab === 'dashboard' && (
+            <RoleGuard
+              allowedRoles={getRolesForTab('dashboard')}
+              onNavigateToDashboard={() => setActiveTab('dashboard')}
+              pageName="Dashboard"
+            >
+              <DashboardPage onNavigate={(tab) => setActiveTab(tab)} />
+            </RoleGuard>
+          )}
+
+          {activeTab === 'quotations' && (
+            <RoleGuard
+              allowedRoles={getRolesForTab('quotations')}
+              onNavigateToDashboard={() => setActiveTab('dashboard')}
+              pageName="Quotations Management"
+            >
+              <QuotationsPage />
+            </RoleGuard>
+          )}
+
+          {activeTab === 'approvals' && (
+            <RoleGuard
+              allowedRoles={getRolesForTab('approvals')}
+              onNavigateToDashboard={() => setActiveTab('dashboard')}
+              pageName="Approvals Inbox"
+            >
+              <ApprovalsPage />
+            </RoleGuard>
+          )}
+
+          {activeTab === 'fulfillment' && (
+            <RoleGuard
+              allowedRoles={getRolesForTab('fulfillment')}
+              onNavigateToDashboard={() => setActiveTab('dashboard')}
+              pageName="Fulfillment & Warehousing"
+            >
+              <FulfillmentPage />
+            </RoleGuard>
+          )}
+
+          {activeTab === 'subscriptions' && (
+            <RoleGuard
+              allowedRoles={getRolesForTab('subscriptions')}
+              onNavigateToDashboard={() => setActiveTab('dashboard')}
+              pageName="Recurring Subscriptions"
+            >
+              <SubscriptionsPage />
+            </RoleGuard>
+          )}
+
+          {activeTab === 'invoices' && (
+            <RoleGuard
+              allowedRoles={getRolesForTab('invoices')}
+              onNavigateToDashboard={() => setActiveTab('dashboard')}
+              pageName="Invoices & Payments"
+            >
+              <InvoicesPage onNavigateTab={(tab: any) => setActiveTab(tab)} />
+            </RoleGuard>
+          )}
+
+          {activeTab === 'dealhealth' && (
+            <RoleGuard
+              allowedRoles={getRolesForTab('dealhealth')}
+              onNavigateToDashboard={() => setActiveTab('dashboard')}
+              pageName="Deal Health & Pipeline Analytics"
+            >
+              <DealHealthPage />
+            </RoleGuard>
+          )}
+
+          {activeTab === 'customers' && (
+            <RoleGuard
+              allowedRoles={getRolesForTab('customers')}
+              onNavigateToDashboard={() => setActiveTab('dashboard')}
+              pageName="Customers Directory"
+            >
+              <CustomersPage />
+            </RoleGuard>
+          )}
+
+          {activeTab === 'warehouses' && (
+            <RoleGuard
+              allowedRoles={getRolesForTab('warehouses')}
+              onNavigateToDashboard={() => setActiveTab('dashboard')}
+              pageName="Warehouses & Inventory Depots"
+            >
+              <WarehousesPage />
+            </RoleGuard>
+          )}
+
+          {activeTab === 'reports' && (
+            <RoleGuard
+              allowedRoles={getRolesForTab('reports')}
+              onNavigateToDashboard={() => setActiveTab('dashboard')}
+              pageName="Sales & Financial Reports"
+            >
+              <ReportsPage />
+            </RoleGuard>
+          )}
+
+          {activeTab === 'products' && (
+            <RoleGuard
+              allowedRoles={getRolesForTab('products')}
+              onNavigateToDashboard={() => setActiveTab('dashboard')}
+              pageName="Products Master Catalog"
+            >
+              <ProductsPage />
+            </RoleGuard>
+          )}
         </main>
 
         {/* Footer shifted along with content */}
