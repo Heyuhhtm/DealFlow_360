@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { Header } from './components/Header';
 import { Sidebar, NavTab, ROLE_NAVIGATION_MAP, getRolesForTab } from './components/Sidebar';
+import { PortalLayout, PortalRoute } from './components/PortalLayout';
 import { RoleGuard } from './components/RoleGuard';
 import { Footer } from './components/Footer';
 import { DashboardPage } from './pages/DashboardPage';
@@ -20,10 +20,16 @@ import { LoginPage } from './pages/LoginPage';
 import { Menu, Hexagon } from 'lucide-react';
 
 const AppContent: React.FC = () => {
-  const { user, portalToken, activeRole, loading } = useAuth();
+  const { user, token, portalToken, activeRole, loading } = useAuth();
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
+  const [portalRoute, setPortalRoute] = useState<PortalRoute>('quotation');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [portalPreviewOpen, setPortalPreviewOpen] = useState(false);
+
+  // Determine user category
+  const isPortalCustomerSession = Boolean(portalToken && !token);
+  const isInternalStaffSession = Boolean(token && user);
 
   // Automatically collapse to icon-only mode on smaller/tablet widths (< 1024px)
   useEffect(() => {
@@ -37,15 +43,81 @@ const AppContent: React.FC = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Safeguard: If user's active role changes and they cannot access the current activeTab, return them to dashboard
+  // Top-Level Route Guard & URL Synchronization
   useEffect(() => {
-    if (activeRole !== 'PORTAL') {
+    const path = window.location.pathname;
+
+    if (isPortalCustomerSession) {
+      // Rule 1: Portal customer should NEVER access internal routes
+      if (!path.startsWith('/portal')) {
+        window.history.replaceState(null, '', '/portal/quotation');
+      }
+      if (path.includes('/messages')) {
+        setPortalRoute('messages');
+      } else if (path.includes('/profile')) {
+        setPortalRoute('profile');
+      } else {
+        setPortalRoute('quotation');
+      }
+      if (activeTab !== 'portal') {
+        setActiveTab('portal');
+      }
+    } else if (isInternalStaffSession && !portalPreviewOpen) {
+      // Rule 2: Internal staff should NEVER directly access /portal/* routes
+      // (They must view via the dedicated preview link to prevent session confusion)
+      if (path.startsWith('/portal') || activeTab === 'portal') {
+        window.history.replaceState(null, '', '/dashboard');
+        setActiveTab('dashboard');
+      } else {
+        // Sync URL with activeTab
+        const cleanTab = path.replace(/^\//, '') as NavTab;
+        if (cleanTab && cleanTab in ROLE_NAVIGATION_MAP.ADMIN && cleanTab !== activeTab) {
+          setActiveTab(cleanTab);
+        }
+      }
+    }
+  }, [isPortalCustomerSession, isInternalStaffSession, portalPreviewOpen, activeTab]);
+
+  // Handle browser back/forward buttons (popstate)
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname;
+
+      if (isPortalCustomerSession) {
+        if (!path.startsWith('/portal')) {
+          window.history.replaceState(null, '', '/portal/quotation');
+          setPortalRoute('quotation');
+        } else {
+          if (path.includes('/messages')) setPortalRoute('messages');
+          else if (path.includes('/profile')) setPortalRoute('profile');
+          else setPortalRoute('quotation');
+        }
+      } else if (isInternalStaffSession && !portalPreviewOpen) {
+        if (path.startsWith('/portal')) {
+          window.history.replaceState(null, '', '/dashboard');
+          setActiveTab('dashboard');
+        } else {
+          const tab = path.replace(/^\//, '') as NavTab;
+          if (tab && tab in ROLE_NAVIGATION_MAP.ADMIN) {
+            setActiveTab(tab);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [isPortalCustomerSession, isInternalStaffSession, portalPreviewOpen]);
+
+  // Safeguard: If internal user's active role changes and they cannot access the current activeTab, return them to dashboard
+  useEffect(() => {
+    if (activeRole !== 'PORTAL' && isInternalStaffSession) {
       const allowed = ROLE_NAVIGATION_MAP[activeRole] || ROLE_NAVIGATION_MAP.ADMIN;
       if (!allowed.includes(activeTab) && activeTab !== 'portal' && activeTab !== 'login') {
         setActiveTab('dashboard');
       }
     }
-  }, [activeRole, activeTab]);
+  }, [activeRole, activeTab, isInternalStaffSession]);
 
   if (loading) {
     return (
@@ -70,33 +142,59 @@ const AppContent: React.FC = () => {
     );
   }
 
-  // Check if current session/view is the Customer Portal (Deal Room)
-  // Per design specifications: Portal has its own separate top-bar style, not the vertical sidebar
-  const isPortalView = activeTab === 'portal' || activeRole === 'PORTAL';
+  // ================= BRANCH 1: CUSTOMER PORTAL EXPERIENCE =================
+  // Triggered if the user is authenticated via customer portal magic-link OR
+  // if an internal staff member is currently viewing in Preview Mode.
+  // Self-contained visual and navigational shell, entirely separate from Sidebar.
+  const showPortalExperience = isPortalCustomerSession || portalPreviewOpen;
 
-  if (isPortalView) {
+  if (showPortalExperience) {
     return (
-      <div className="min-h-screen flex flex-col bg-[#f8fafc]">
-        {/* Customer Portal Top Bar */}
-        <Header activeTab={activeTab} setActiveTab={setActiveTab} />
-        <main className="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 py-8">
-          <CustomerPortalPage />
-        </main>
-        <Footer />
-      </div>
+      <PortalLayout
+        currentRoute={portalRoute}
+        onRouteChange={(route) => {
+          setPortalRoute(route);
+          window.history.pushState(null, '', `/portal/${route}`);
+        }}
+        isPreview={portalPreviewOpen}
+        onExitPreview={() => {
+          setPortalPreviewOpen(false);
+          setActiveTab('dashboard');
+          window.history.replaceState(null, '', '/dashboard');
+        }}
+      >
+        <CustomerPortalPage
+          currentRoute={portalRoute}
+          onRouteChange={(route) => {
+            setPortalRoute(route);
+            window.history.pushState(null, '', `/portal/${route}`);
+          }}
+        />
+      </PortalLayout>
     );
   }
 
+  // ================= BRANCH 2: INTERNAL STAFF EXPERIENCE =================
+  // Rendered for staff members (ADMIN, SALES_MANAGER, FINANCE, SALES_REP)
+  // Protected with collapsible vertical Sidebar and RoleGuard on all modules.
   return (
     <div className="min-h-screen flex flex-col bg-[#f8fafc]">
-      {/* Left Vertical Sidebar for all Internal Pages (Filtered by user role) */}
+      {/* Left Vertical Sidebar (Filtered by staff user role) */}
       <Sidebar
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={(tab) => {
+          setActiveTab(tab);
+          window.history.pushState(null, '', `/${tab}`);
+        }}
         collapsed={sidebarCollapsed}
         setCollapsed={setSidebarCollapsed}
         mobileOpen={mobileOpen}
         setMobileOpen={setMobileOpen}
+        onOpenPortalPreview={() => {
+          setPortalPreviewOpen(true);
+          setPortalRoute('quotation');
+          window.history.pushState(null, '', '/portal/quotation');
+        }}
       />
 
       {/* Mobile Top Header Bar with Hamburger Toggle (< md) */}

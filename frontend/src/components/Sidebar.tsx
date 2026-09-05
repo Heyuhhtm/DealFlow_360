@@ -22,6 +22,7 @@ import {
   X,
   Shield,
   User as UserIcon,
+  Eye,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types';
@@ -102,6 +103,7 @@ interface SidebarProps {
   setCollapsed: (collapsed: boolean) => void;
   mobileOpen: boolean;
   setMobileOpen: (open: boolean) => void;
+  onOpenPortalPreview?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -111,6 +113,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setCollapsed,
   mobileOpen,
   setMobileOpen,
+  onOpenPortalPreview,
 }) => {
   const { user, activeRole, loginAsRole, logout } = useAuth();
   const [profilePopoverOpen, setProfilePopoverOpen] = useState(false);
@@ -308,32 +311,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
             );
           })}
 
-          {/* Quick Portal Switcher Item (Admin Demo) */}
-          {currentRole === 'ADMIN' && (
-            <div className="pt-2 border-t border-blue-900/60 my-2">
-              <button
-                onClick={() => handleNavClick('portal')}
-                title={collapsed ? 'Customer Portal (Deal Room)' : undefined}
-                className={`w-full flex items-center transition-all duration-150 rounded-xl ${
-                  collapsed ? 'justify-center p-2.5' : 'px-3 py-2.5 space-x-3'
-                } ${
-                  activeTab === 'portal'
-                    ? 'bg-emerald-600 text-white font-bold border-l-4 border-white shadow-sm'
-                    : 'text-emerald-300/90 hover:text-white hover:bg-emerald-950/60 font-medium'
-                }`}
-              >
-                <Globe className="w-5 h-5 shrink-0 text-emerald-400" />
-                {!collapsed && (
-                  <div className="flex items-center justify-between flex-1 text-left">
-                    <span className="text-xs font-semibold">Customer Portal</span>
-                    <span className="text-[9px] bg-emerald-500/20 text-emerald-200 px-1.5 py-0.5 rounded font-bold uppercase">
-                      Live
-                    </span>
-                  </div>
-                )}
-              </button>
-            </div>
-          )}
+          {/* Customer Deal Room Preview Link (For Sales Reps & Internal Staff) */}
+          <div className="pt-2 border-t border-blue-900/60 my-2">
+            <button
+              onClick={() => {
+                if (onOpenPortalPreview) {
+                  onOpenPortalPreview();
+                } else {
+                  setActiveTab('portal');
+                }
+                setMobileOpen(false);
+              }}
+              title={collapsed ? 'Preview Customer Deal Room (Demo)' : undefined}
+              className={`w-full flex items-center transition-all duration-150 rounded-xl ${
+                collapsed ? 'justify-center p-2.5' : 'px-3 py-2.5 space-x-3'
+              } text-emerald-300 hover:text-white hover:bg-emerald-950/60 font-medium group cursor-pointer`}
+            >
+              <Eye className="w-5 h-5 shrink-0 text-emerald-400 group-hover:scale-110 transition-transform" />
+              {!collapsed && (
+                <div className="flex items-center justify-between flex-1 text-left">
+                  <span className="text-xs font-semibold">Deal Room Preview</span>
+                  <span className="text-[9px] bg-emerald-500/25 text-emerald-200 border border-emerald-400/30 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                    Demo
+                  </span>
+                </div>
+              )}
+            </button>
+          </div>
         </nav>
 
         {/* Bottom Section: Notifications & User Profile Popover */}
@@ -519,13 +523,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <div className="border-t border-slate-100 my-1"></div>
 
                   <button
-                    onClick={() => handleRoleChange('PORTAL')}
-                    className={`w-full text-left px-4 py-2 text-xs flex items-center justify-between hover:bg-emerald-50 ${
-                      activeRole === 'PORTAL' ? 'bg-emerald-50 text-emerald-700 font-semibold' : 'text-slate-700'
-                    }`}
+                    onClick={() => {
+                      setProfilePopoverOpen(false);
+                      if (onOpenPortalPreview) {
+                        onOpenPortalPreview();
+                      }
+                    }}
+                    className="w-full text-left px-4 py-2 text-xs flex items-center justify-between hover:bg-emerald-50 text-slate-700 font-medium transition cursor-pointer"
                   >
-                    <span>🌐 Customer Deal Room (Apex)</span>
-                    {activeRole === 'PORTAL' && <UserCheck className="w-3.5 h-3.5 text-emerald-600" />}
+                    <div className="flex items-center space-x-2">
+                      <Eye className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <div>
+                        <span className="font-semibold text-slate-800">Preview Customer View</span>
+                        <span className="block text-[10px] text-slate-400">View Apex Enterprises screen</span>
+                      </div>
+                    </div>
+                    <span className="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded border border-emerald-200">
+                      PREVIEW
+                    </span>
                   </button>
 
                   <div className="border-t border-slate-100 my-1"></div>
