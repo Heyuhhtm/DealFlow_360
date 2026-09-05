@@ -169,6 +169,10 @@ export const customersApi = {
     const res = await api.patch<CustomerDirectoryItem>(`/customers/${id}`, data);
     return res.data;
   },
+  delete: async (id: string) => {
+    const res = await api.delete<{ message: string; deletedCustomerId: string; deletedQuotesCount: number }>(`/customers/${id}`);
+    return res.data;
+  },
 };
 
 // Upsell API

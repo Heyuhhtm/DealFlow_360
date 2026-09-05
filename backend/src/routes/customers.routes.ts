@@ -4,6 +4,7 @@ import {
   getCustomerById,
   createCustomer,
   updateCustomer,
+  deleteCustomer,
 } from '../controllers/customers.controller';
 import { requireAuth } from '../middleware/auth.middleware';
 import { asyncHandler } from '../lib/errors';
@@ -16,5 +17,6 @@ router.get('/', asyncHandler(getCustomers));
 router.get('/:id', asyncHandler(getCustomerById));
 router.post('/', asyncHandler(createCustomer));
 router.patch('/:id', asyncHandler(updateCustomer));
+router.delete('/:id', asyncHandler(deleteCustomer));
 
 export default router;

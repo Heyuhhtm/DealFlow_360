@@ -137,3 +137,43 @@ export const updateCustomer = async (req: Request, res: Response): Promise<void>
 
   res.status(200).json(updated);
 };
+
+export const deleteCustomer = async (req: Request, res: Response): Promise<void> => {
+  const id = String(req.params.id);
+
+  const customer = await prisma.customer.findUnique({
+    where: { id },
+    include: {
+      quotations: {
+        select: { id: true },
+      },
+    },
+  });
+
+  if (!customer) {
+    throw new AppError('Customer not found', 404);
+  }
+
+  const quoteIds = customer.quotations.map((q: any) => q.id);
+
+  await prisma.$transaction(async (tx: any) => {
+    if (quoteIds.length > 0) {
+      await tx.portalComment.deleteMany({ where: { quotationId: { in: quoteIds } } });
+      await tx.dealHealthAlert.deleteMany({ where: { quotationId: { in: quoteIds } } });
+      await tx.subscriptionBilling.deleteMany({ where: { quotationId: { in: quoteIds } } });
+      await tx.warehouseSplit.deleteMany({ where: { quotationId: { in: quoteIds } } });
+      await tx.auditLogEntry.deleteMany({ where: { quotationId: { in: quoteIds } } });
+      await tx.approvalStep.deleteMany({ where: { quotationId: { in: quoteIds } } });
+      await tx.quotationLine.deleteMany({ where: { quotationId: { in: quoteIds } } });
+      await tx.quotation.deleteMany({ where: { id: { in: quoteIds } } });
+    }
+    await tx.customer.delete({ where: { id } });
+  });
+
+  res.status(200).json({
+    message: 'Customer and associated data deleted successfully',
+    deletedCustomerId: id,
+    deletedQuotesCount: quoteIds.length,
+  });
+};
+
