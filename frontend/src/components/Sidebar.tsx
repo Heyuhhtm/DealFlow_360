@@ -115,7 +115,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setMobileOpen,
   onOpenPortalPreview,
 }) => {
-  const { user, activeRole, loginAsRole, logout } = useAuth();
+  const { user, activeRole, loginAsRole, logout, switchAccount } = useAuth();
   const [profilePopoverOpen, setProfilePopoverOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
@@ -545,13 +545,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                   <div className="border-t border-slate-100 my-1"></div>
 
+                  {/* Switch Account Action: Full session reset and redirect to choose-login */}
+                  <button
+                    onClick={() => {
+                      setProfilePopoverOpen(false);
+                      // switchAccount clears all auth state, tokens, and storage, returning to /choose-login
+                      switchAccount();
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-xs flex items-center justify-between hover:bg-slate-100 text-slate-800 font-semibold transition cursor-pointer"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RefreshCw className="w-3.5 h-3.5 text-slate-500" />
+                      <span>Switch Account</span>
+                    </div>
+                    <span className="text-[10px] text-slate-400 font-normal">Reset Session</span>
+                  </button>
+
+                  <div className="border-t border-slate-100 my-1"></div>
+
+                  {/* Log Out: Clears current session and returns to choose-login */}
                   <button
                     onClick={() => {
                       setProfilePopoverOpen(false);
                       logout();
-                      setActiveTab('dashboard');
                     }}
-                    className="w-full text-left px-4 py-2.5 text-xs flex items-center justify-between hover:bg-rose-50 text-rose-700 font-bold transition"
+                    className="w-full text-left px-4 py-2.5 text-xs flex items-center justify-between hover:bg-rose-50 text-rose-700 font-bold transition cursor-pointer"
                   >
                     <span>Log Out</span>
                     <LogOut className="w-3.5 h-3.5 text-rose-500" />

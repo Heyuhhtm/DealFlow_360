@@ -7,6 +7,7 @@ import {
   MessageSquare,
   User as UserIcon,
   ArrowLeft,
+  RefreshCw,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -27,7 +28,7 @@ export const PortalLayout: React.FC<PortalLayoutProps> = ({
   isPreview = false,
   onExitPreview,
 }) => {
-  const { portalCustomerEmail, logout } = useAuth();
+  const { portalCustomerEmail, logout, switchAccount } = useAuth();
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-100 text-slate-800">
@@ -128,14 +129,25 @@ export const PortalLayout: React.FC<PortalLayoutProps> = ({
             </div>
 
             {!isPreview ? (
-              <button
-                onClick={logout}
-                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-rose-600/20 hover:bg-rose-600/40 text-rose-200 hover:text-white border border-rose-500/30 text-xs font-bold transition cursor-pointer"
-                title="Log out of Customer Portal"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Sign Out</span>
-              </button>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={switchAccount}
+                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-blue-900/50 hover:bg-blue-800 text-blue-200 hover:text-white border border-blue-700/60 text-xs font-semibold transition cursor-pointer"
+                  title="Switch to another account or team login"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Switch Account</span>
+                </button>
+
+                <button
+                  onClick={logout}
+                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-rose-600/20 hover:bg-rose-600/40 text-rose-200 hover:text-white border border-rose-500/30 text-xs font-bold transition cursor-pointer"
+                  title="Log out of Customer Portal"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Sign Out</span>
+                </button>
+              </div>
             ) : (
               <button
                 onClick={onExitPreview}

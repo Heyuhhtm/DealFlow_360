@@ -13,6 +13,7 @@ interface AuthContextType {
   signup: (data: { name: string; email: string; password: string; role: UserRole }) => Promise<void>;
   loginAsRole: (role: UserRole | 'PORTAL') => Promise<void>;
   logout: () => void;
+  switchAccount: () => void;
   requestPortalAccess: (email: string) => Promise<string>;
 }
 
@@ -116,14 +117,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return res.magicLinkToken;
   };
 
-  const logout = () => {
+  /**
+   * Full session reset: clears internal JWT, portal magic link, user state, and caches,
+   * then redirects to /choose-login.
+   */
+  const switchAccount = () => {
+    // 1. Wipe React context state
     setUser(null);
     setToken(null);
     setPortalToken(null);
     setPortalCustomerEmail(null);
+    setActiveRole('ADMIN');
+
+    // 2. Clear all auth tokens and cached identifiers in storage
     localStorage.removeItem('dealflow360_token');
     localStorage.removeItem('dealflow360_portal_token');
     localStorage.removeItem('dealflow360_portal_email');
+    sessionStorage.clear();
+
+    // 3. Clear any memory query caches if present
+    if (typeof window !== 'undefined') {
+      if ((window as any).__REACT_QUERY_CLIENT__) {
+        (window as any).__REACT_QUERY_CLIENT__.clear();
+      }
+      window.history.replaceState(null, '', '/choose-login');
+    }
+  };
+
+  /**
+   * Standard logout: performs clean session reset and brings user to /choose-login
+   */
+  const logout = () => {
+    switchAccount();
   };
 
   return (
@@ -139,6 +164,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signup,
         loginAsRole,
         logout,
+        switchAccount,
         requestPortalAccess,
       }}
     >

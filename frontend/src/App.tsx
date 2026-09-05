@@ -17,6 +17,7 @@ import { CustomersPage } from './pages/CustomersPage';
 import { WarehousesPage } from './pages/WarehousesPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { LoginPage } from './pages/LoginPage';
+import { ChooseLoginPage } from './pages/ChooseLoginPage';
 import { Menu, Hexagon } from 'lucide-react';
 
 const AppContent: React.FC = () => {
@@ -130,12 +131,24 @@ const AppContent: React.FC = () => {
     );
   }
 
-  // If user is not logged in (neither internal user nor customer portal), display the Login & Sign Up page
+  // If user is not logged in (neither internal user nor customer portal), display the Choose Login & Workspace Choice page
   if (!user && !portalToken) {
     return (
       <div className="min-h-screen flex flex-col justify-between bg-slate-100">
         <div className="flex-1 flex items-center justify-center py-8">
-          <LoginPage onLoginSuccess={() => setActiveTab('dashboard')} />
+          <ChooseLoginPage
+            onLoginSuccess={() => {
+              const isPortal = localStorage.getItem('dealflow360_portal_token');
+              if (isPortal) {
+                setActiveTab('portal');
+                setPortalRoute('quotation');
+                window.history.pushState(null, '', '/portal/quotation');
+              } else {
+                setActiveTab('dashboard');
+                window.history.pushState(null, '', '/dashboard');
+              }
+            }}
+          />
         </div>
         <Footer />
       </div>
@@ -229,7 +242,7 @@ const AppContent: React.FC = () => {
         }`}
       >
         <main className="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {activeTab === 'login' && <LoginPage onLoginSuccess={() => setActiveTab('dashboard')} />}
+          {activeTab === 'login' && <ChooseLoginPage onLoginSuccess={() => setActiveTab('dashboard')} />}
 
           {activeTab === 'dashboard' && (
             <RoleGuard
