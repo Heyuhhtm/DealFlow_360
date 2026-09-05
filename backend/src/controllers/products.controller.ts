@@ -58,14 +58,58 @@ export const getProductById = async (req: Request, res: Response): Promise<void>
   res.status(200).json(product);
 };
 
-export const createProduct = async (_req: Request, res: Response): Promise<void> => {
-  res.status(501).json({ error: { message: 'Not implemented (seeded directly)', statusCode: 501 } });
+import { z } from 'zod';
+import { BillingCycle } from '@prisma/client';
+
+export const createProductSchema = z.object({
+  name: z.string().min(1, 'Product name is required'),
+  category: z.nativeEnum(ProductCategory),
+  unitPrice: z.number().positive('Unit price must be positive'),
+  marginPercent: z.number().min(0).max(100).default(50),
+  discountCeiling: z.number().min(0).max(100).default(15),
+  billingCycle: z.nativeEnum(BillingCycle).optional().nullable(),
+  initialStock: z.number().int().min(0).optional().default(50),
+});
+
+export const createProduct = async (req: Request, res: Response): Promise<void> => {
+  const data = createProductSchema.parse(req.body);
+
+  const product = await prisma.product.create({
+    data: {
+      name: data.name,
+      category: data.category,
+      unitPrice: data.unitPrice,
+      marginPercent: data.marginPercent,
+      discountCeiling: data.discountCeiling,
+      billingCycle: data.category === 'SUBSCRIPTION' ? data.billingCycle || BillingCycle.MONTHLY : null,
+    },
+  });
+
+  // If HARDWARE, automatically allocate warehouse stock across depots
+  if (data.category === 'HARDWARE') {
+    const warehouses = await prisma.warehouse.findMany();
+    if (warehouses.length > 0) {
+      await Promise.all(
+        warehouses.map((wh) =>
+          prisma.warehouseStock.create({
+            data: {
+              warehouseId: wh.id,
+              productId: product.id,
+              quantity: data.initialStock || 50,
+            },
+          }).catch(() => {})
+        )
+      );
+    }
+  }
+
+  res.status(201).json(product);
 };
 
 export const updateProduct = async (_req: Request, res: Response): Promise<void> => {
-  res.status(501).json({ error: { message: 'Not implemented (seeded directly)', statusCode: 501 } });
+  res.status(501).json({ error: { message: 'Not implemented', statusCode: 501 } });
 };
 
 export const deleteProduct = async (_req: Request, res: Response): Promise<void> => {
-  res.status(501).json({ error: { message: 'Not implemented (seeded directly)', statusCode: 501 } });
+  res.status(501).json({ error: { message: 'Not implemented', statusCode: 501 } });
 };

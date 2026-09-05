@@ -126,6 +126,18 @@ export const productsApi = {
     const res = await api.get<Product>(`/products/${id}`);
     return res.data;
   },
+  create: async (data: {
+    name: string;
+    category: string;
+    unitPrice: number;
+    marginPercent: number;
+    discountCeiling: number;
+    billingCycle?: string | null;
+    initialStock?: number;
+  }) => {
+    const res = await api.post<Product>('/products', data);
+    return res.data;
+  },
 };
 
 export const warehousesApi = {

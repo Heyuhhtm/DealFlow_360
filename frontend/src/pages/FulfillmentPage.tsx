@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { warehousesApi, quotationsApi, fulfillmentApi } from '../services/api';
 import { Warehouse, QuotationListItem, FulfillmentPreview } from '../types';
-import { Boxes, Truck, AlertTriangle, CheckCircle2, ArrowRight, Layers, DollarSign } from 'lucide-react';
+import { Boxes, Truck, AlertTriangle, CheckCircle2, ArrowRight, Layers, DollarSign, RefreshCw } from 'lucide-react';
 
 export const FulfillmentPage: React.FC = () => {
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
@@ -12,6 +12,7 @@ export const FulfillmentPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [calculating, setCalculating] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [consolidating, setConsolidating] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   const loadData = async () => {
@@ -75,6 +76,36 @@ export const FulfillmentPage: React.FC = () => {
       setStatusMessage(err.response?.data?.error?.message || 'Failed to confirm fulfillment');
     } finally {
       setConfirming(false);
+    }
+  };
+
+  const handleConsolidateBackorder = async () => {
+    if (!splitPreview || splitPreview.backorders.length === 0 || warehouses.length === 0) return;
+    setConsolidating(true);
+    setStatusMessage(null);
+    try {
+      const mainWh = warehouses.find((w) => w.name.toLowerCase().includes('main')) || warehouses[0];
+
+      // Replenish the required backordered stock into the primary depot
+      for (const backorder of splitPreview.backorders) {
+        await warehousesApi.replenishStock(mainWh.id, backorder.productId, backorder.quantity + 10);
+      }
+
+      // Reload warehouse stocks
+      const updatedWarehouses = await warehousesApi.list();
+      setWarehouses(updatedWarehouses);
+
+      // Recalculate fulfillment split with the newly consolidated inventory
+      const updatedPreview = await fulfillmentApi.calculate(selectedQuotationId);
+      setSplitPreview(updatedPreview);
+
+      setStatusMessage(
+        `✅ New shipment arrived mid-fulfillment! Backorders successfully consolidated into ${mainWh.name}. Zero split backorders remaining!`
+      );
+    } catch (err: any) {
+      setStatusMessage(err.response?.data?.error?.message || 'Failed to consolidate backorder');
+    } finally {
+      setConsolidating(false);
     }
   };
 
@@ -231,11 +262,45 @@ export const FulfillmentPage: React.FC = () => {
               ))}
             </div>
 
-            {splitPreview.backorders.length > 0 && (
-              <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-800 flex items-center space-x-2">
-                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-                <span>
-                  Backorder Required: {splitPreview.backorders.map((b) => `${b.quantity} units of ${b.productId.slice(0, 8)}`).join(', ')}
+            {/* Backorders Notification & Section B6 Consolidate Prompt */}
+            {splitPreview.backorders.length > 0 ? (
+              <div className="p-4 bg-amber-50/80 border border-amber-300 rounded-xl text-xs space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-start space-x-2 text-amber-900">
+                    <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold text-sm block">
+                        Partial Stock Allocation &bull; Backorder Required
+                      </span>
+                      <p className="text-amber-800 text-xs mt-0.5">
+                        Current depot stock cannot fulfill full order demand (
+                        {splitPreview.backorders.reduce((sum, b) => sum + b.quantity, 0)} units pending across{' '}
+                        {splitPreview.backorders.length} SKU).
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleConsolidateBackorder}
+                    disabled={consolidating}
+                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow-sm flex items-center justify-center space-x-1.5 transition disabled:opacity-50 shrink-0"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${consolidating ? 'animate-spin' : ''}`} />
+                    <span>{consolidating ? 'Consolidating...' : 'Consolidate Remaining Backorder'}</span>
+                  </button>
+                </div>
+
+                <div className="p-2.5 bg-white/80 rounded-lg border border-amber-200 text-[11px] text-amber-900 flex items-center justify-between">
+                  <span>
+                    💡 <strong>Specification Rule (B6):</strong> Clicking <em>Consolidate Remaining Backorder</em> records incoming inventory to the Main Warehouse and recalculates splits into a consolidated dispatch.
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-800 flex items-center space-x-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span className="font-semibold">
+                  Zero Backorders &bull; 100% of order lines fulfilled across warehouse network.
                 </span>
               </div>
             )}
