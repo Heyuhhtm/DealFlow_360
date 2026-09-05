@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { productsApi } from '../services/api';
 import { Product, ProductCategory } from '../types';
-import { Package, Search, Filter, Percent, DollarSign, Layers, Plus, X, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { Package, Search, Filter, Percent, IndianRupee, Layers, Plus, X, CheckCircle2, ShieldAlert } from 'lucide-react';
 
 export const ProductsPage: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -165,7 +165,7 @@ export const ProductsPage: React.FC = () => {
               </div>
 
               <h3 className="text-base font-bold text-slate-900 mb-1">{p.name}</h3>
-              <p className="text-2xl font-black text-slate-900 mb-4">${p.unitPrice.toFixed(2)}</p>
+              <p className="text-2xl font-black text-slate-900 mb-4">₹{p.unitPrice.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
             </div>
 
             <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-100 text-xs">
@@ -234,7 +234,7 @@ export const ProductsPage: React.FC = () => {
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                    Unit Price ($)
+                    Unit Price (₹)
                   </label>
                   <input
                     type="number"

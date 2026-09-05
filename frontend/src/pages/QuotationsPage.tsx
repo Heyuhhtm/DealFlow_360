@@ -368,7 +368,7 @@ export const QuotationsPage: React.FC = () => {
                 <th className="py-3.5 px-6">Customer</th>
                 <th className="py-3.5 px-6">Tier</th>
                 <th className="py-3.5 px-6">Deal Items & Products</th>
-                <th className="py-3.5 px-6">Total Amount</th>
+                <th className="py-3.5 px-6">Total Amount (₹)</th>
                 <th className="py-3.5 px-6">Status</th>
                 <th className="py-3.5 px-6">Risk Score</th>
                 <th className="py-3.5 px-6">Last Activity</th>
@@ -418,7 +418,7 @@ export const QuotationsPage: React.FC = () => {
                     </div>
                   </td>
                   <td className="py-4 px-6 font-bold text-slate-900">
-                    ${quote.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    ₹{quote.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </td>
                   <td className="py-4 px-6">
                     <StatusBadge status={quote.status} />
@@ -480,7 +480,7 @@ export const QuotationsPage: React.FC = () => {
                 </div>
 
                 <div className="text-[11px] font-mono text-slate-500 mb-2 px-1">
-                  Total: ${colTotal.toLocaleString('en-US', { minimumFractionDigits: 0 })}
+                  Total: ₹{colTotal.toLocaleString('en-IN', { minimumFractionDigits: 0 })}
                 </div>
 
                 {/* Cards List */}
@@ -534,7 +534,7 @@ export const QuotationsPage: React.FC = () => {
                         <div>
                           <span className="text-[10px] text-slate-400 block uppercase">Deal Amount</span>
                           <span className="font-mono font-bold text-slate-900 text-sm">
-                            ${quote.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            ₹{quote.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                           </span>
                         </div>
                         <div className="text-right">
@@ -658,7 +658,7 @@ export const QuotationsPage: React.FC = () => {
                                   ) : (
                                     products.map((p) => (
                                       <option key={p.id} value={p.id}>
-                                        {p.name} (${p.unitPrice}) [Ceil: {p.discountCeiling}%]
+                                        {p.name} (₹{p.unitPrice}) [Ceil: {p.discountCeiling}%]
                                       </option>
                                     ))
                                   )}
@@ -707,7 +707,7 @@ export const QuotationsPage: React.FC = () => {
                               {/* Line Total & Remove */}
                               <div className="sm:col-span-2 flex items-center justify-between pl-2">
                                 <span className="text-xs font-bold text-slate-900">
-                                  $
+                                  ₹
                                   {prod
                                     ? (
                                       line.quantity *
@@ -754,9 +754,9 @@ export const QuotationsPage: React.FC = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div>
                         <span className="text-xs text-blue-200 block">Total Quotation Value</span>
-                        <span className="text-2xl font-black text-white">${liveTotal.toFixed(2)}</span>
+                        <span className="text-2xl font-black text-white">₹{liveTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                         <span className="text-[11px] text-slate-400 block mt-0.5">
-                          Subtotal: ${liveSubtotal.toFixed(2)}
+                          Subtotal: ₹{liveSubtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                         </span>
                       </div>
 
@@ -834,7 +834,7 @@ export const QuotationsPage: React.FC = () => {
                         <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
                           <div>
                             <span className="font-mono font-bold text-slate-900">
-                              ${product.unitPrice.toFixed(2)}
+                              ₹{product.unitPrice.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                             </span>
                             <span className="text-[10px] text-emerald-600 font-bold ml-1.5">
                               {marginDelta >= 0 ? `+${marginDelta}%` : `${marginDelta}%`} margin
@@ -921,15 +921,15 @@ export const QuotationsPage: React.FC = () => {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
               <div>
                 <span className="text-xs text-slate-400 block">Subtotal</span>
-                <span className="text-sm font-bold text-slate-900">${selectedQuotation.subtotal.toFixed(2)}</span>
+                <span className="text-sm font-bold text-slate-900">₹{selectedQuotation.subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
               </div>
               <div>
                 <span className="text-xs text-slate-400 block">Total Discount</span>
-                <span className="text-sm font-bold text-rose-600">-${selectedQuotation.totalDiscount.toFixed(2)}</span>
+                <span className="text-sm font-bold text-rose-600">-₹{selectedQuotation.totalDiscount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
               </div>
               <div>
                 <span className="text-xs text-slate-400 block">Final Total</span>
-                <span className="text-lg font-extrabold text-blue-700">${selectedQuotation.total.toFixed(2)}</span>
+                <span className="text-lg font-extrabold text-blue-700">₹{selectedQuotation.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
               </div>
               <div>
                 <span className="text-xs text-slate-400 block">Blended Risk Score</span>
@@ -947,9 +947,9 @@ export const QuotationsPage: React.FC = () => {
                       <th className="py-2.5 px-4">Product</th>
                       <th className="py-2.5 px-4">Category</th>
                       <th className="py-2.5 px-4">Qty</th>
-                      <th className="py-2.5 px-4">Unit Price</th>
+                      <th className="py-2.5 px-4">Unit Price (₹)</th>
                       <th className="py-2.5 px-4">Discount</th>
-                      <th className="py-2.5 px-4 text-right">Line Total</th>
+                      <th className="py-2.5 px-4 text-right">Line Total (₹)</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -958,10 +958,10 @@ export const QuotationsPage: React.FC = () => {
                         <td className="py-2.5 px-4 font-semibold text-slate-900">{l.productName}</td>
                         <td className="py-2.5 px-4 text-slate-500">{l.category}</td>
                         <td className="py-2.5 px-4 text-slate-700">{l.quantity}</td>
-                        <td className="py-2.5 px-4 text-slate-700">${l.unitPrice.toFixed(2)}</td>
+                        <td className="py-2.5 px-4 text-slate-700">₹{l.unitPrice.toFixed(2)}</td>
                         <td className="py-2.5 px-4 font-bold text-blue-600">{l.discountPercent}%</td>
                         <td className="py-2.5 px-4 text-right font-bold text-slate-900">
-                          ${l.lineTotal.toFixed(2)}
+                          ₹{l.lineTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                         </td>
                       </tr>
                     ))}
@@ -991,7 +991,7 @@ export const QuotationsPage: React.FC = () => {
                         )}
                       </div>
                       <span className="text-[11px] font-semibold text-emerald-600 mt-1 block">
-                        +${s.marginDelta.toFixed(2)} margin dollars
+                        +₹{s.marginDelta.toFixed(2)} margin value
                       </span>
                     </div>
                   ))}

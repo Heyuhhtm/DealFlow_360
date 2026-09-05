@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { quotationsApi, billingApi } from '../services/api';
 import { QuotationListItem } from '../types';
-import { RefreshCw, Calendar, DollarSign, CheckCircle2, ArrowRight, Zap, Calculator } from 'lucide-react';
+import { RefreshCw, Calendar, IndianRupee, CheckCircle2, ArrowRight, Zap, Calculator } from 'lucide-react';
 
 export const SubscriptionsPage: React.FC = () => {
   const [quotations, setQuotations] = useState<QuotationListItem[]>([]);
@@ -97,7 +97,7 @@ export const SubscriptionsPage: React.FC = () => {
             >
               {quotations.map((q) => (
                 <option key={q.id} value={q.id}>
-                  {q.customerName} — ${q.total.toFixed(2)} ({q.status})
+                  {q.customerName} — ₹{q.total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({q.status})
                 </option>
               ))}
             </select>
@@ -144,7 +144,7 @@ export const SubscriptionsPage: React.FC = () => {
                         {line.billingCycle}
                       </span>
                     </div>
-                    <span className="font-extrabold text-slate-900 text-sm">${line.lineTotal.toFixed(2)}</span>
+                    <span className="font-extrabold text-slate-900 text-sm">₹{line.lineTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
 
                   <div className="mt-3 flex items-center justify-between pt-2 border-t border-purple-100">
@@ -195,7 +195,7 @@ export const SubscriptionsPage: React.FC = () => {
         {/* One-Time Lines Panel */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
           <h3 className="text-base font-bold text-slate-900 mb-2 flex items-center space-x-2">
-            <DollarSign className="w-4 h-4 text-emerald-600" />
+            <IndianRupee className="w-4 h-4 text-emerald-600" />
             <span>One-Time Charges (Hardware / Services)</span>
           </h3>
           <p className="text-xs text-slate-500 mb-4">Capital expenditures and initial setup billed immediately.</p>
@@ -210,7 +210,7 @@ export const SubscriptionsPage: React.FC = () => {
                       Qty: {line.quantity} • Disc: {line.discountPercent}%
                     </span>
                   </div>
-                  <span className="font-bold text-slate-900 text-sm">${line.lineTotal.toFixed(2)}</span>
+                  <span className="font-bold text-slate-900 text-sm">₹{line.lineTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
               ))
             ) : (
@@ -244,7 +244,7 @@ export const SubscriptionsPage: React.FC = () => {
                       year: 'numeric',
                     })}
                   </span>
-                  <span className="font-extrabold text-blue-900 text-sm">${item.amount.toFixed(2)}</span>
+                  <span className="font-extrabold text-blue-900 text-sm">₹{item.amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
               </div>
             ))}

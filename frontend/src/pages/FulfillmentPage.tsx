@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { warehousesApi, quotationsApi, fulfillmentApi } from '../services/api';
 import { Warehouse, QuotationListItem, FulfillmentPreview } from '../types';
-import { Boxes, Truck, AlertTriangle, CheckCircle2, ArrowRight, Layers, DollarSign, RefreshCw } from 'lucide-react';
+import { Boxes, Truck, AlertTriangle, CheckCircle2, ArrowRight, Layers, IndianRupee, RefreshCw } from 'lucide-react';
 
 export const FulfillmentPage: React.FC = () => {
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
@@ -144,7 +144,7 @@ export const FulfillmentPage: React.FC = () => {
               <div className="flex items-center justify-between pb-3 border-b border-slate-200 mb-4">
                 <div>
                   <h4 className="font-bold text-slate-900 text-sm">{wh.name}</h4>
-                  <span className="text-xs text-slate-500">Base Freight: ${wh.shippingCostBase.toFixed(2)}</span>
+                  <span className="text-xs text-slate-500">Base Freight: ₹{wh.shippingCostBase.toFixed(2)}</span>
                 </div>
                 <span className="text-xs font-bold bg-blue-100 text-blue-800 px-2.5 py-0.5 rounded-full">
                   {wh.stock.length} Catalog Items
@@ -199,7 +199,7 @@ export const FulfillmentPage: React.FC = () => {
             >
               {quotations.map((q) => (
                 <option key={q.id} value={q.id}>
-                  {q.customerName} — ${q.total.toFixed(2)} ({q.status})
+                  {q.customerName} — ₹{q.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })} ({q.status})
                 </option>
               ))}
             </select>
@@ -227,7 +227,7 @@ export const FulfillmentPage: React.FC = () => {
                 </span>
                 <p className="text-xs text-blue-700">
                   Total Estimated Shipments: <strong>{splitPreview.totalEstimatedShipments}</strong> • Total Estimated
-                  Freight: <strong>${splitPreview.totalEstimatedCost.toFixed(2)}</strong>
+                  Freight: <strong>₹{splitPreview.totalEstimatedCost.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
                 </p>
               </div>
 
@@ -247,7 +247,7 @@ export const FulfillmentPage: React.FC = () => {
                   <div className="flex justify-between items-center mb-2">
                     <span className="font-bold text-xs text-slate-900">{s.warehouseName}</span>
                     <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                      Freight: ${s.estimatedShipmentCost.toFixed(2)}
+                      Freight: ₹{s.estimatedShipmentCost.toFixed(2)}
                     </span>
                   </div>
                   <div className="space-y-1 text-xs text-slate-600">
@@ -322,7 +322,7 @@ export const FulfillmentPage: React.FC = () => {
                   <span className="font-bold text-slate-900 block">{split.warehouseName}</span>
                   <div className="flex justify-between mt-1 text-slate-600">
                     <span>Units Dispatched: {split.quantityFulfilled}</span>
-                    <span className="font-semibold text-slate-900">${split.estimatedShipmentCost?.toFixed(2)}</span>
+                    <span className="font-semibold text-slate-900">₹{split.estimatedShipmentCost?.toFixed(2)}</span>
                   </div>
                 </div>
               ))}

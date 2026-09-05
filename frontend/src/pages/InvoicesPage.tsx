@@ -176,7 +176,7 @@ export const InvoicesPage: React.FC<InvoicesPageProps> = ({ onNavigateTab }) => 
               <tr className="border-b border-slate-200 bg-slate-50/70 text-xs font-bold text-slate-600 uppercase tracking-wider">
                 <th className="py-3 px-5">Invoice #</th>
                 <th className="py-3 px-5">Customer</th>
-                <th className="py-3 px-5">Amount ($)</th>
+                <th className="py-3 px-5">Amount (₹)</th>
                 <th className="py-3 px-5">Status</th>
                 <th className="py-3 px-5">Due Date</th>
                 <th className="py-3 px-5 text-right">Actions</th>
@@ -194,7 +194,7 @@ export const InvoicesPage: React.FC<InvoicesPageProps> = ({ onNavigateTab }) => 
                   </td>
                   <td className="py-4 px-5 font-medium text-slate-900">{inv.customerName}</td>
                   <td className="py-4 px-5 font-semibold text-slate-900">
-                    ${inv.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    ₹{inv.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </td>
                   <td className="py-4 px-5">
                     {inv.status === 'Paid' ? (
@@ -256,7 +256,7 @@ export const InvoicesPage: React.FC<InvoicesPageProps> = ({ onNavigateTab }) => 
                 <div>
                   <span className="text-slate-500 block">Total Due Amount</span>
                   <span className="text-lg font-bold text-slate-900">
-                    ${selectedInvoice.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    ₹{selectedInvoice.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
                 <div>

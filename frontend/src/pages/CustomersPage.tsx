@@ -5,7 +5,7 @@ import {
   Search,
   ShieldAlert,
   Award,
-  DollarSign,
+  IndianRupee,
   FileText,
   Calendar,
   CheckCircle2,
@@ -207,7 +207,7 @@ export const CustomersPage: React.FC = () => {
                   <th className="py-3.5 px-6">Ceiling</th>
                   <th className="py-3.5 px-6 text-center">Quotations</th>
                   <th className="py-3.5 px-6 text-center">Confirmed Deals</th>
-                  <th className="py-3.5 px-6 text-right">Lifetime Quoted</th>
+                  <th className="py-3.5 px-6 text-right">Lifetime Quoted (₹)</th>
                   <th className="py-3.5 px-6 text-right">Actions</th>
                 </tr>
               </thead>
@@ -233,7 +233,7 @@ export const CustomersPage: React.FC = () => {
                       </span>
                     </td>
                     <td className="py-4 px-6 text-right font-mono font-semibold text-slate-900">
-                      ${c.lifetimeValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      ₹{c.lifetimeValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </td>
                     <td className="py-4 px-6 text-right">
                       <button
@@ -397,7 +397,7 @@ export const CustomersPage: React.FC = () => {
                           </span>
                         </div>
                         <span className="font-mono font-bold text-slate-900">
-                          ${q.total.toFixed(2)}
+                          ₹{q.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                         </span>
                       </div>
                     ))}

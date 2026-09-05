@@ -233,7 +233,7 @@ export const createQuotation = async (req: Request, res: Response): Promise<void
         quotationId: quotation.id,
         userId: repId,
         action: 'CREATED',
-        detail: `Quotation created with ${lines.length} lines. Total: $${total}. Status: ${initialStatus}`,
+        detail: `Quotation created with ${lines.length} lines. Total: ₹${total}. Status: ${initialStatus}`,
       },
     });
 
@@ -405,7 +405,7 @@ export const updateQuotation = async (req: Request, res: Response): Promise<void
           quotationId: id,
           userId,
           action: 'EDITED_LINES',
-          detail: `Updated to ${lines.length} lines. New total: $${total}, Risk Score: ${blendedRiskScore}%`,
+          detail: `Updated to ${lines.length} lines. New total: ₹${total}, Risk Score: ${blendedRiskScore}%`,
         },
       });
     }

@@ -327,7 +327,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                     <span className="text-xs text-slate-400 font-mono">Deal ID: {deal.id.slice(0, 8)}...</span>
                   </div>
                   <div className="text-right">
-                    <span className="text-sm font-bold text-slate-900 block">${deal.total.toFixed(2)}</span>
+                    <span className="text-sm font-bold text-slate-900 block">
+                      ₹{deal.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </span>
                     <span className="text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
                       {deal.daysStalled} days stalled
                     </span>

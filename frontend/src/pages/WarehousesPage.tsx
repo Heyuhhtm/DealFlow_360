@@ -201,7 +201,7 @@ export const WarehousesPage: React.FC = () => {
                 <div>
                   <span className="text-[11px] font-semibold text-slate-400 uppercase">Base Shipping</span>
                   <div className="font-bold text-slate-900 text-lg mt-0.5">
-                    ${wh.shippingCostBase.toFixed(2)}
+                    ₹{wh.shippingCostBase.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
                 </div>
                 <div>
@@ -286,7 +286,7 @@ export const WarehousesPage: React.FC = () => {
                     <td className="py-4 px-6">
                       <div className="font-semibold text-slate-900">{product.name}</div>
                       <div className="text-xs text-slate-400 font-mono">
-                        Base Price: ${product.unitPrice.toFixed(2)}
+                        Base Price: ₹{product.unitPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </div>
                     </td>
                     <td className="py-4 px-6">
@@ -374,7 +374,7 @@ export const WarehousesPage: React.FC = () => {
                 >
                   {warehouses.map((w) => (
                     <option key={w.id} value={w.id}>
-                      {w.name} (Base Shipping: ${w.shippingCostBase})
+                      {w.name} (Base Shipping: ₹{w.shippingCostBase.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
                     </option>
                   ))}
                 </select>
@@ -396,7 +396,7 @@ export const WarehousesPage: React.FC = () => {
                       .filter((p) => p.category === 'HARDWARE')
                       .map((p) => (
                         <option key={p.id} value={p.id}>
-                          {p.name} (${p.unitPrice})
+                          {p.name} (₹{p.unitPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
                         </option>
                       ))
                   )}

@@ -183,7 +183,7 @@ export const updateBillingLine = async (req: Request, res: Response): Promise<vo
 
   // Mock proration: half of the delta represents remaining cycle adjustment
   const prorationAmount = Number((delta * 0.5).toFixed(2));
-  const prorationSign = prorationAmount >= 0 ? `+$${prorationAmount}` : `-$${Math.abs(prorationAmount)}`;
+  const prorationSign = prorationAmount >= 0 ? `+₹${prorationAmount}` : `-₹${Math.abs(prorationAmount)}`;
   const prorationNote = `Prorated adjustment: ${prorationSign} for remaining billing period`;
 
   const updatedLine = await prisma.$transaction(async (tx) => {

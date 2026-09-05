@@ -14,7 +14,7 @@ import {
   User as UserIcon,
   Tag,
   Clock,
-  DollarSign,
+  IndianRupee,
 } from 'lucide-react';
 import { StatusBadge } from '../components/StatusBadge';
 
@@ -258,7 +258,7 @@ export const CustomerPortalPage: React.FC<CustomerPortalPageProps> = ({
                   <tr className="border-b border-slate-200 bg-slate-50/70 text-xs font-bold text-slate-600 uppercase tracking-wider">
                     <th className="py-3 px-4">Line Item</th>
                     <th className="py-3 px-4">Qty</th>
-                    <th className="py-3 px-4">Unit Price</th>
+                    <th className="py-3 px-4">Unit Price (₹)</th>
                     <th className="py-3 px-4">Current Disc.</th>
                     <th className="py-3 px-4">Customer Comment / Negotiation Note</th>
                   </tr>
@@ -285,7 +285,7 @@ export const CustomerPortalPage: React.FC<CustomerPortalPageProps> = ({
                           <span>{line.productName || 'Hardware Line Item'}</span>
                         </td>
                         <td className="py-3.5 px-4 text-slate-700">{line.quantity}</td>
-                        <td className="py-3.5 px-4 text-slate-700">${line.unitPrice.toFixed(2)}</td>
+                        <td className="py-3.5 px-4 text-slate-700">₹{line.unitPrice.toFixed(2)}</td>
                         <td className="py-3.5 px-4 font-semibold text-blue-700">{line.discountPercent}%</td>
                         <td className="py-3.5 px-4 text-slate-600 italic text-xs">
                           {lineComment ? (
@@ -315,7 +315,7 @@ export const CustomerPortalPage: React.FC<CustomerPortalPageProps> = ({
                 </div>
                 <div className="flex items-center space-x-3 text-xs font-semibold">
                   <span className="bg-white/20 px-3.5 py-1.5 rounded-lg border border-white/20 font-mono">
-                    Order Total: ${quotation.total?.toFixed(2)}
+                    Order Total: ₹{quotation.total?.toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -353,7 +353,7 @@ export const CustomerPortalPage: React.FC<CustomerPortalPageProps> = ({
                   >
                     {quotation?.lines?.map((line: any) => (
                       <option key={line.id} value={line.id}>
-                        {line.productName} ({line.quantity} units @ ${line.unitPrice})
+                        {line.productName} ({line.quantity} units @ ₹{line.unitPrice})
                       </option>
                     ))}
                   </select>

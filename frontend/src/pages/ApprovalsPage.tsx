@@ -138,7 +138,7 @@ export const ApprovalsPage: React.FC = () => {
                         </span>
                       </div>
                       <p className="text-xs text-slate-500">
-                        Total Deal Value: <strong className="text-slate-800">${q.total.toLocaleString()}</strong> •
+                        Total Deal Value: <strong className="text-slate-800">₹{q.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong> •
                         Sales Rep: {q.rep.name}
                       </p>
                       <div className="text-xs text-slate-600 mt-2 bg-slate-50 p-2.5 rounded-lg border border-slate-200 max-w-xl">

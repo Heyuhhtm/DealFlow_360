@@ -65,7 +65,7 @@ export const DealHealthPage: React.FC<DealHealthPageProps> = ({ onNavigateQuotat
                 <div key={deal.id} className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-slate-900 text-sm">{deal.customerName}</span>
-                    <span className="font-extrabold text-slate-900 text-sm">${deal.total.toFixed(2)}</span>
+                    <span className="font-extrabold text-slate-900 text-sm">₹{deal.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                   </div>
                   <div className="flex justify-between items-center text-slate-500">
                     <span>Quote ID: {deal.id.slice(0, 8)}...</span>

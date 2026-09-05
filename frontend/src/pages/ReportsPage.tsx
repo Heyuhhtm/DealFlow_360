@@ -6,7 +6,7 @@ import {
   Calendar,
   Filter,
   TrendingUp,
-  DollarSign,
+  IndianRupee,
   Percent,
   CheckCircle2,
   FileSpreadsheet,
@@ -82,7 +82,7 @@ export const ReportsPage: React.FC = () => {
 
   // CSV Export handler
   const handleExportCSV = () => {
-    const headers = ['Quote ID', 'Customer', 'Tier', 'Status', 'Risk Score %', 'Total Amount ($)', 'Last Activity'];
+    const headers = ['Quote ID', 'Customer', 'Tier', 'Status', 'Risk Score %', 'Total Amount (₹)', 'Last Activity'];
     const rows = filtered.map((q) => [
       q.id,
       `"${q.customerName}"`,
@@ -220,7 +220,7 @@ export const ReportsPage: React.FC = () => {
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
           <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Quoted Pipeline</span>
           <div className="mt-2 text-3xl font-black text-slate-900 font-mono">
-            ${totalPipeline.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            ₹{totalPipeline.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </div>
           <div className="mt-2 text-xs text-blue-600 font-semibold flex items-center space-x-1">
             <ArrowUpRight className="w-3.5 h-3.5" />
@@ -231,7 +231,7 @@ export const ReportsPage: React.FC = () => {
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm bg-gradient-to-br from-emerald-50/40 to-transparent border-emerald-200">
           <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider">Confirmed Revenue</span>
           <div className="mt-2 text-3xl font-black text-emerald-900 font-mono">
-            ${totalWonRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            ₹{totalWonRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </div>
           <div className="mt-2 text-xs text-emerald-700 font-medium">
             {confirmedQuotes.length} orders closed &amp; billed
@@ -285,7 +285,7 @@ export const ReportsPage: React.FC = () => {
                   <th className="py-3.5 px-6">Tier</th>
                   <th className="py-3.5 px-6">Status</th>
                   <th className="py-3.5 px-6 text-center">Blended Risk</th>
-                  <th className="py-3.5 px-6 text-right">Deal Value</th>
+                  <th className="py-3.5 px-6 text-right">Deal Value (₹)</th>
                   <th className="py-3.5 px-6 text-right">Timestamp</th>
                 </tr>
               </thead>
@@ -326,7 +326,7 @@ export const ReportsPage: React.FC = () => {
                       </span>
                     </td>
                     <td className="py-4 px-6 text-right font-mono font-bold text-slate-900">
-                      ${q.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      ₹{q.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </td>
                     <td className="py-4 px-6 text-right text-xs text-slate-500">
                       {new Date(q.lastActivityAt).toLocaleDateString()}
@@ -352,7 +352,7 @@ export const ReportsPage: React.FC = () => {
                 </span>
               </div>
               <div className="flex items-center justify-between text-xs text-slate-500">
-                <span>Unit Price: ${p.unitPrice.toFixed(2)}</span>
+                <span>Unit Price: ₹{p.unitPrice.toFixed(2)}</span>
                 <span className="font-mono font-semibold text-slate-700">Margin: {p.marginPercent}%</span>
               </div>
               <div className="text-[11px] text-slate-400">
