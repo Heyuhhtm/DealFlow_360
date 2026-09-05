@@ -43,7 +43,7 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
-  const { user, activeRole, loginAsRole, logout } = useAuth();
+  const { user, activeRole, logout, switchAccount } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
@@ -96,15 +96,6 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
     }
   };
 
-  const handleRoleChange = async (role: UserRole | 'PORTAL') => {
-    setDropdownOpen(false);
-    await loginAsRole(role);
-    if (role === 'PORTAL') {
-      setActiveTab('portal');
-    } else if (role === 'SALES_MANAGER' || role === 'FINANCE') {
-      setActiveTab('approvals');
-    }
-  };
 
   return (
     <header className="bg-[#0b2b68] text-white sticky top-0 z-50 shadow-md border-b border-blue-900/40">
@@ -212,74 +203,32 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
                   <p className="text-xs text-blue-600 font-mono mt-0.5">{user?.email || 'portal@dealflow360.com'}</p>
                 </div>
 
-                <div className="py-1">
-                  <div className="px-3 py-1 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                    Switch Active Persona
-                  </div>
-
+                <div className="p-1.5 space-y-1">
                   <button
-                    onClick={() => handleRoleChange('ADMIN')}
-                    className={`w-full text-left px-4 py-2 text-xs flex items-center justify-between hover:bg-blue-50 ${
-                      activeRole === 'ADMIN' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-700'
-                    }`}
+                    onClick={() => {
+                      setDropdownOpen(false);
+                      switchAccount();
+                    }}
+                    className="w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-slate-100 text-slate-700 font-medium transition rounded-lg cursor-pointer"
                   >
-                    <span>👑 Admin User (Full Access)</span>
-                    {activeRole === 'ADMIN' && <UserCheck className="w-3.5 h-3.5 text-blue-600" />}
-                  </button>
-
-                  <button
-                    onClick={() => handleRoleChange('SALES_REP')}
-                    className={`w-full text-left px-4 py-2 text-xs flex items-center justify-between hover:bg-blue-50 ${
-                      activeRole === 'SALES_REP' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-700'
-                    }`}
-                  >
-                    <span>💼 Sales Rep (Sarah Connor)</span>
-                    {activeRole === 'SALES_REP' && <UserCheck className="w-3.5 h-3.5 text-blue-600" />}
-                  </button>
-
-                  <button
-                    onClick={() => handleRoleChange('SALES_MANAGER')}
-                    className={`w-full text-left px-4 py-2 text-xs flex items-center justify-between hover:bg-blue-50 ${
-                      activeRole === 'SALES_MANAGER' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-700'
-                    }`}
-                  >
-                    <span>👔 Sales Manager (Michael Scott)</span>
-                    {activeRole === 'SALES_MANAGER' && <UserCheck className="w-3.5 h-3.5 text-blue-600" />}
-                  </button>
-
-                  <button
-                    onClick={() => handleRoleChange('FINANCE')}
-                    className={`w-full text-left px-4 py-2 text-xs flex items-center justify-between hover:bg-blue-50 ${
-                      activeRole === 'FINANCE' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-700'
-                    }`}
-                  >
-                    <span>💰 Finance Approver (Angela Martin)</span>
-                    {activeRole === 'FINANCE' && <UserCheck className="w-3.5 h-3.5 text-blue-600" />}
+                    <span>Switch Account</span>
                   </button>
 
                   <div className="border-t border-slate-100 my-1"></div>
 
-                  <button
-                    onClick={() => handleRoleChange('PORTAL')}
-                    className={`w-full text-left px-4 py-2 text-xs flex items-center justify-between hover:bg-emerald-50 ${
-                      activeRole === 'PORTAL' ? 'bg-emerald-50 text-emerald-700 font-semibold' : 'text-slate-700'
-                    }`}
-                  >
-                    <span>🌐 Customer Portal (Apex Enterprises)</span>
-                    {activeRole === 'PORTAL' && <UserCheck className="w-3.5 h-3.5 text-emerald-600" />}
-                  </button>
-
-                  <div className="border-t border-slate-100 my-1"></div>
-
+                  {/* 
+                    NOTE: Both 'Switch Account' and 'Log Out' intentionally perform an identical 
+                    full reset (clearing internal JWT tokens, portal tokens, query caches, and local storage)
+                    and redirect to /choose-login.
+                  */}
                   <button
                     onClick={() => {
                       setDropdownOpen(false);
                       logout();
-                      setActiveTab('dashboard');
                     }}
-                    className="w-full text-left px-4 py-2 text-xs flex items-center justify-between hover:bg-rose-50 text-rose-700 font-semibold"
+                    className="w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-rose-50 text-rose-700 font-bold transition rounded-lg cursor-pointer"
                   >
-                    <span>🚪 Sign Out / Switch User</span>
+                    <span>Log Out</span>
                     <LogOut className="w-3.5 h-3.5 text-rose-500" />
                   </button>
                 </div>

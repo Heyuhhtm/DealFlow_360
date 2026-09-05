@@ -26,7 +26,6 @@ const AppContent: React.FC = () => {
   const [portalRoute, setPortalRoute] = useState<PortalRoute>('quotation');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [portalPreviewOpen, setPortalPreviewOpen] = useState(false);
 
   // Determine user category
   const isPortalCustomerSession = Boolean(portalToken && !token);
@@ -63,9 +62,8 @@ const AppContent: React.FC = () => {
       if (activeTab !== 'portal') {
         setActiveTab('portal');
       }
-    } else if (isInternalStaffSession && !portalPreviewOpen) {
-      // Rule 2: Internal staff should NEVER directly access /portal/* routes
-      // (They must view via the dedicated preview link to prevent session confusion)
+    } else if (isInternalStaffSession) {
+      // Rule 2: Internal staff should NEVER access /portal/* routes
       if (path.startsWith('/portal') || activeTab === 'portal') {
         window.history.replaceState(null, '', '/dashboard');
         setActiveTab('dashboard');
@@ -77,7 +75,7 @@ const AppContent: React.FC = () => {
         }
       }
     }
-  }, [isPortalCustomerSession, isInternalStaffSession, portalPreviewOpen, activeTab]);
+  }, [isPortalCustomerSession, isInternalStaffSession, activeTab]);
 
   // Handle browser back/forward buttons (popstate)
   useEffect(() => {
@@ -93,7 +91,7 @@ const AppContent: React.FC = () => {
           else if (path.includes('/profile')) setPortalRoute('profile');
           else setPortalRoute('quotation');
         }
-      } else if (isInternalStaffSession && !portalPreviewOpen) {
+      } else if (isInternalStaffSession) {
         if (path.startsWith('/portal')) {
           window.history.replaceState(null, '', '/dashboard');
           setActiveTab('dashboard');
@@ -108,7 +106,7 @@ const AppContent: React.FC = () => {
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [isPortalCustomerSession, isInternalStaffSession, portalPreviewOpen]);
+  }, [isPortalCustomerSession, isInternalStaffSession]);
 
   // Safeguard: If internal user's active role changes and they cannot access the current activeTab, return them to dashboard
   useEffect(() => {
@@ -156,12 +154,9 @@ const AppContent: React.FC = () => {
   }
 
   // ================= BRANCH 1: CUSTOMER PORTAL EXPERIENCE =================
-  // Triggered if the user is authenticated via customer portal magic-link OR
-  // if an internal staff member is currently viewing in Preview Mode.
+  // Triggered ONLY if the user is authenticated via customer portal magic-link token.
   // Self-contained visual and navigational shell, entirely separate from Sidebar.
-  const showPortalExperience = isPortalCustomerSession || portalPreviewOpen;
-
-  if (showPortalExperience) {
+  if (isPortalCustomerSession) {
     return (
       <PortalLayout
         currentRoute={portalRoute}
@@ -169,12 +164,7 @@ const AppContent: React.FC = () => {
           setPortalRoute(route);
           window.history.pushState(null, '', `/portal/${route}`);
         }}
-        isPreview={portalPreviewOpen}
-        onExitPreview={() => {
-          setPortalPreviewOpen(false);
-          setActiveTab('dashboard');
-          window.history.replaceState(null, '', '/dashboard');
-        }}
+        isPreview={false}
       >
         <CustomerPortalPage
           currentRoute={portalRoute}
@@ -203,11 +193,6 @@ const AppContent: React.FC = () => {
         setCollapsed={setSidebarCollapsed}
         mobileOpen={mobileOpen}
         setMobileOpen={setMobileOpen}
-        onOpenPortalPreview={() => {
-          setPortalPreviewOpen(true);
-          setPortalRoute('quotation');
-          window.history.pushState(null, '', '/portal/quotation');
-        }}
       />
 
       {/* Mobile Top Header Bar with Hamburger Toggle (< md) */}

@@ -8,21 +8,17 @@ import {
   Receipt,
   Activity,
   Package,
-  Globe,
   Bell,
   ChevronLeft,
   ChevronRight,
   Hexagon,
-  UserCheck,
   Users,
   Building2,
   BarChart3,
   LogOut,
   ChevronUp,
   X,
-  Shield,
   User as UserIcon,
-  Eye,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types';
@@ -103,7 +99,6 @@ interface SidebarProps {
   setCollapsed: (collapsed: boolean) => void;
   mobileOpen: boolean;
   setMobileOpen: (open: boolean) => void;
-  onOpenPortalPreview?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -113,9 +108,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setCollapsed,
   mobileOpen,
   setMobileOpen,
-  onOpenPortalPreview,
 }) => {
-  const { user, activeRole, loginAsRole, logout, switchAccount } = useAuth();
+  const { user, logout, switchAccount } = useAuth();
   const [profilePopoverOpen, setProfilePopoverOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
@@ -150,9 +144,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'products', label: 'Products', icon: <Package className="w-5 h-5 shrink-0" /> },
   ];
 
-  // Resolve current active role from AuthContext
-  const currentRole: UserRole =
-    (activeRole !== 'PORTAL' ? (activeRole as UserRole) : user?.role) || 'ADMIN';
+  // Resolve current authenticated role from AuthContext user object
+  const currentRole: UserRole = user?.role || 'ADMIN';
   const allowedTabs = ROLE_NAVIGATION_MAP[currentRole] || ROLE_NAVIGATION_MAP.ADMIN;
 
   // Filter the rendered nav links based on the current user's role from AuthContext
@@ -162,51 +155,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const finalNavItems =
     visibleNavItems.length > 0 ? visibleNavItems : navItems.filter((item) => item.id === 'dashboard');
 
+  const formatRoleLabel = (role?: string) => {
+    switch (role) {
+      case 'ADMIN':
+        return 'Administrator';
+      case 'SALES_MANAGER':
+        return 'Sales Manager';
+      case 'SALES_REP':
+        return 'Sales Representative';
+      case 'FINANCE':
+        return 'Finance Approver';
+      default:
+        return role ? role.replace(/_/g, ' ') : 'Staff Member';
+    }
+  };
+
   const getRoleInitials = () => {
-    switch (activeRole) {
-      case 'ADMIN':
-        return 'AD';
-      case 'SALES_REP':
-        return 'SR';
-      case 'SALES_MANAGER':
-        return 'SM';
-      case 'FINANCE':
-        return 'FN';
-      case 'PORTAL':
-        return 'CP';
-      default:
-        return 'US';
-    }
-  };
-
-  const getRoleDisplay = () => {
-    switch (activeRole) {
-      case 'ADMIN':
-        return 'Admin User';
-      case 'SALES_REP':
-        return 'Sales Rep (Sarah)';
-      case 'SALES_MANAGER':
-        return 'Sales Manager (Michael)';
-      case 'FINANCE':
-        return 'Finance (Angela)';
-      case 'PORTAL':
-        return 'Customer Portal (Apex)';
-      default:
-        return user?.name || 'User';
-    }
-  };
-
-  const handleRoleChange = async (role: UserRole | 'PORTAL') => {
-    setProfilePopoverOpen(false);
-    await loginAsRole(role);
-    if (role === 'PORTAL') {
-      setActiveTab('portal');
-    } else {
-      const allowed = ROLE_NAVIGATION_MAP[role] || ROLE_NAVIGATION_MAP.ADMIN;
-      if (!allowed.includes(activeTab)) {
-        setActiveTab('dashboard');
+    if (user?.name) {
+      const parts = user.name.trim().split(' ');
+      if (parts.length >= 2) {
+        return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
       }
+      return user.name.slice(0, 2).toUpperCase();
     }
+    const role = user?.role;
+    return role ? role.slice(0, 2).toUpperCase() : 'US';
   };
 
   const handleNavClick = (tab: NavTab) => {
@@ -310,34 +283,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </button>
             );
           })}
-
-          {/* Customer Deal Room Preview Link (For Sales Reps & Internal Staff) */}
-          <div className="pt-2 border-t border-blue-900/60 my-2">
-            <button
-              onClick={() => {
-                if (onOpenPortalPreview) {
-                  onOpenPortalPreview();
-                } else {
-                  setActiveTab('portal');
-                }
-                setMobileOpen(false);
-              }}
-              title={collapsed ? 'Preview Customer Deal Room (Demo)' : undefined}
-              className={`w-full flex items-center transition-all duration-150 rounded-xl ${
-                collapsed ? 'justify-center p-2.5' : 'px-3 py-2.5 space-x-3'
-              } text-emerald-300 hover:text-white hover:bg-emerald-950/60 font-medium group cursor-pointer`}
-            >
-              <Eye className="w-5 h-5 shrink-0 text-emerald-400 group-hover:scale-110 transition-transform" />
-              {!collapsed && (
-                <div className="flex items-center justify-between flex-1 text-left">
-                  <span className="text-xs font-semibold">Deal Room Preview</span>
-                  <span className="text-[9px] bg-emerald-500/25 text-emerald-200 border border-emerald-400/30 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
-                    Demo
-                  </span>
-                </div>
-              )}
-            </button>
-          </div>
         </nav>
 
         {/* Bottom Section: Notifications & User Profile Popover */}
@@ -430,7 +375,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               className={`w-full flex items-center rounded-xl transition ${
                 collapsed ? 'justify-center p-1.5' : 'p-2 space-x-2.5'
               } hover:bg-blue-900/60 bg-blue-950/40 border border-blue-800/50`}
-              title={user?.name || getRoleDisplay()}
+              title={user?.name || formatRoleLabel(user?.role)}
             >
               <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-xs font-bold text-white shadow-inner shrink-0">
                 {getRoleInitials()}
@@ -439,9 +384,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {!collapsed && (
                 <div className="flex-1 text-left min-w-0">
                   <p className="text-xs font-bold text-white truncate leading-tight">
-                    {user?.name || 'David Wallace'}
+                    {user?.name || 'Authenticated User'}
                   </p>
-                  <p className="text-[10px] text-blue-200 truncate">{getRoleDisplay()}</p>
+                  <p className="text-[10px] text-blue-200 truncate">{formatRoleLabel(user?.role)}</p>
                 </div>
               )}
 
@@ -451,128 +396,74 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {/* Profile Popover Menu */}
             {profilePopoverOpen && (
               <div className="absolute left-full bottom-0 ml-3 w-72 bg-white rounded-2xl shadow-2xl border border-slate-200 text-slate-800 py-2 z-50 animate-in fade-in slide-in-from-left-2">
-                <div className="px-4 py-2.5 border-b border-slate-100">
+                {/* 1. CURRENT ACCOUNT SESSION Header */}
+                <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50 rounded-t-2xl">
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                     Current Account Session
                   </p>
-                  <p className="text-sm font-bold text-slate-900 mt-0.5">{getRoleDisplay()}</p>
-                  <p className="text-xs text-blue-600 font-mono mt-0.5 truncate">
-                    {user?.email || 'admin@dealflow360.com'}
+                  <p className="text-sm font-bold text-slate-900 mt-1">
+                    {user?.name || 'Authenticated User'}
+                  </p>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <span className="text-[10px] font-semibold bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
+                      {formatRoleLabel(user?.role)}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 font-mono mt-1 truncate">
+                    {user?.email || 'user@dealflow360.com'}
                   </p>
                 </div>
 
-                {/* Profile Item */}
+                {/* 2. Profile & Account Settings Link */}
                 <div className="p-1.5 border-b border-slate-100">
                   <button
                     onClick={() => {
                       setProfilePopoverOpen(false);
                       // In the future opens profile modal or settings
                     }}
-                    className="w-full text-left px-3 py-2 text-xs flex items-center space-x-2.5 rounded-lg hover:bg-blue-50 text-slate-700 font-medium transition"
+                    className="w-full text-left px-3 py-2 text-xs flex items-center space-x-2.5 rounded-lg hover:bg-slate-100 text-slate-700 font-medium transition cursor-pointer"
                   >
                     <UserIcon className="w-4 h-4 text-blue-600" />
                     <span className="font-semibold">Profile & Account Settings</span>
                   </button>
                 </div>
 
-                <div className="py-1">
-                  <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    Switch Active Persona (Demo)
-                  </div>
-
-                  <button
-                    onClick={() => handleRoleChange('ADMIN')}
-                    className={`w-full text-left px-4 py-2 text-xs flex items-center justify-between hover:bg-blue-50 ${
-                      activeRole === 'ADMIN' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-700'
-                    }`}
-                  >
-                    <span>👑 Admin User (David Wallace)</span>
-                    {activeRole === 'ADMIN' && <UserCheck className="w-3.5 h-3.5 text-blue-600" />}
-                  </button>
-
-                  <button
-                    onClick={() => handleRoleChange('SALES_REP')}
-                    className={`w-full text-left px-4 py-2 text-xs flex items-center justify-between hover:bg-blue-50 ${
-                      activeRole === 'SALES_REP' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-700'
-                    }`}
-                  >
-                    <span>💼 Sales Rep (Sarah Connor)</span>
-                    {activeRole === 'SALES_REP' && <UserCheck className="w-3.5 h-3.5 text-blue-600" />}
-                  </button>
-
-                  <button
-                    onClick={() => handleRoleChange('SALES_MANAGER')}
-                    className={`w-full text-left px-4 py-2 text-xs flex items-center justify-between hover:bg-blue-50 ${
-                      activeRole === 'SALES_MANAGER' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-700'
-                    }`}
-                  >
-                    <span>👔 Sales Manager (Michael Scott)</span>
-                    {activeRole === 'SALES_MANAGER' && <UserCheck className="w-3.5 h-3.5 text-blue-600" />}
-                  </button>
-
-                  <button
-                    onClick={() => handleRoleChange('FINANCE')}
-                    className={`w-full text-left px-4 py-2 text-xs flex items-center justify-between hover:bg-blue-50 ${
-                      activeRole === 'FINANCE' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-700'
-                    }`}
-                  >
-                    <span>💰 Finance Lead (Angela Martin)</span>
-                    {activeRole === 'FINANCE' && <UserCheck className="w-3.5 h-3.5 text-blue-600" />}
-                  </button>
-
-                  <div className="border-t border-slate-100 my-1"></div>
-
+                {/* Actions: Switch Account & Log Out */}
+                <div className="p-1.5 space-y-1">
+                  {/* 5. Switch Account: Clears all tokens/caches and redirects to /choose-login */}
                   <button
                     onClick={() => {
                       setProfilePopoverOpen(false);
-                      if (onOpenPortalPreview) {
-                        onOpenPortalPreview();
-                      }
-                    }}
-                    className="w-full text-left px-4 py-2 text-xs flex items-center justify-between hover:bg-emerald-50 text-slate-700 font-medium transition cursor-pointer"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <Eye className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                      <div>
-                        <span className="font-semibold text-slate-800">Preview Customer View</span>
-                        <span className="block text-[10px] text-slate-400">View Apex Enterprises screen</span>
-                      </div>
-                    </div>
-                    <span className="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded border border-emerald-200">
-                      PREVIEW
-                    </span>
-                  </button>
-
-                  <div className="border-t border-slate-100 my-1"></div>
-
-                  {/* Switch Account Action: Full session reset and redirect to choose-login */}
-                  <button
-                    onClick={() => {
-                      setProfilePopoverOpen(false);
-                      // switchAccount clears all auth state, tokens, and storage, returning to /choose-login
                       switchAccount();
                     }}
-                    className="w-full text-left px-4 py-2.5 text-xs flex items-center justify-between hover:bg-slate-100 text-slate-800 font-semibold transition cursor-pointer"
+                    className="w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-slate-100 text-slate-700 font-medium transition rounded-lg cursor-pointer"
                   >
-                    <div className="flex items-center space-x-2">
-                      <RefreshCw className="w-3.5 h-3.5 text-slate-500" />
-                      <span>Switch Account</span>
+                    <div className="flex items-center space-x-2.5">
+                      <RefreshCw className="w-4 h-4 text-slate-500" />
+                      <span className="font-semibold">Switch Account</span>
                     </div>
                     <span className="text-[10px] text-slate-400 font-normal">Reset Session</span>
                   </button>
 
                   <div className="border-t border-slate-100 my-1"></div>
 
-                  {/* Log Out: Clears current session and returns to choose-login */}
+                  {/* 
+                    6. NOTE: Both 'Switch Account' and 'Log Out' intentionally perform an identical 
+                    full reset (clearing internal JWT tokens, portal tokens, query caches, and local storage)
+                    and redirect to /choose-login. There is no safe reason for one to be "softer" than the other,
+                    as lingering tokens or cached role state risk cross-account data leakage.
+                  */}
                   <button
                     onClick={() => {
                       setProfilePopoverOpen(false);
                       logout();
                     }}
-                    className="w-full text-left px-4 py-2.5 text-xs flex items-center justify-between hover:bg-rose-50 text-rose-700 font-bold transition cursor-pointer"
+                    className="w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-rose-50 text-rose-700 font-bold transition rounded-lg cursor-pointer"
                   >
-                    <span>Log Out</span>
-                    <LogOut className="w-3.5 h-3.5 text-rose-500" />
+                    <div className="flex items-center space-x-2.5">
+                      <LogOut className="w-4 h-4 text-rose-600" />
+                      <span>Log Out</span>
+                    </div>
                   </button>
                 </div>
               </div>
