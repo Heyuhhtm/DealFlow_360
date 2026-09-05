@@ -152,6 +152,8 @@ export interface QuotationListItem {
 export interface WarehouseStockItem {
   productId: string;
   productName: string;
+  category?: string;
+  unitPrice?: number;
   quantity: number;
 }
 
@@ -159,6 +161,8 @@ export interface Warehouse {
   id: string;
   name: string;
   shippingCostBase: number;
+  splitsCount?: number;
+  createdAt?: string;
   stock: WarehouseStockItem[];
 }
 

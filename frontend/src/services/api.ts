@@ -145,6 +145,30 @@ export const warehousesApi = {
     const res = await api.get<Warehouse[]>('/warehouses');
     return res.data;
   },
+  getById: async (id: string) => {
+    const res = await api.get<Warehouse>(`/warehouses/${id}`);
+    return res.data;
+  },
+  create: async (data: {
+    name: string;
+    shippingCostBase: number;
+    initialStock?: { productId: string; quantity: number }[];
+  }) => {
+    const res = await api.post<Warehouse>('/warehouses', data);
+    return res.data;
+  },
+  update: async (id: string, data: { name?: string; shippingCostBase?: number }) => {
+    const res = await api.patch<Warehouse>(`/warehouses/${id}`, data);
+    return res.data;
+  },
+  updateStock: async (id: string, updates: { productId: string; quantity: number }[]) => {
+    const res = await api.patch<{ success: boolean; warehouse: Warehouse }>(`/warehouses/${id}/stock`, { updates });
+    return res.data;
+  },
+  delete: async (id: string) => {
+    const res = await api.delete<{ message: string; deletedWarehouseId: string }>(`/warehouses/${id}`);
+    return res.data;
+  },
   replenishStock: async (warehouseId: string, productId: string, quantityDelta: number) => {
     const res = await api.post(`/warehouses/${warehouseId}/stock`, { productId, quantityDelta });
     return res.data;
