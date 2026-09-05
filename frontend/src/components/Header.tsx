@@ -274,17 +274,31 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
                   <button
                     onClick={() => {
                       setDropdownOpen(false);
-                      setActiveTab('login');
+                      logout();
+                      setActiveTab('dashboard');
                     }}
-                    className="w-full text-left px-4 py-2 text-xs flex items-center justify-between hover:bg-slate-50 text-slate-600 font-medium"
+                    className="w-full text-left px-4 py-2 text-xs flex items-center justify-between hover:bg-rose-50 text-rose-700 font-semibold"
                   >
-                    <span>🚪 Switch Account / Login Screen</span>
-                    <LogOut className="w-3.5 h-3.5 text-slate-400" />
+                    <span>🚪 Sign Out / Switch User</span>
+                    <LogOut className="w-3.5 h-3.5 text-rose-500" />
                   </button>
                 </div>
               </div>
             )}
           </div>
+
+          {/* Direct Logout Button */}
+          <button
+            onClick={() => {
+              logout();
+              setActiveTab('dashboard');
+            }}
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-blue-900/60 hover:bg-rose-900/80 text-blue-200 hover:text-white text-xs font-semibold border border-blue-700/50 hover:border-rose-600/50 transition shadow-sm"
+            title="Sign Out of DealFlow360"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Logout</span>
+          </button>
         </div>
       </div>
 

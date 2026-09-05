@@ -43,14 +43,31 @@ export const WarehousesPage: React.FC = () => {
       if (whData.length > 0 && !selectedWarehouseId) {
         setSelectedWarehouseId(whData[0].id);
       }
-      if (prodData.length > 0 && !selectedProductId) {
-        setSelectedProductId(prodData[0].id);
+      const hwOnly = prodData.filter((p) => p.category === 'HARDWARE');
+      if (hwOnly.length > 0 && !selectedProductId) {
+        setSelectedProductId(hwOnly[0].id);
       }
     } catch (err) {
       console.error('Failed to load warehouses data:', err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleOpenReplenish = (productId?: string, warehouseId?: string) => {
+    if (warehouseId) {
+      setSelectedWarehouseId(warehouseId);
+    } else if (warehouses.length > 0) {
+      setSelectedWarehouseId(warehouses[0].id);
+    }
+    const hwOnly = products.filter((p) => p.category === 'HARDWARE');
+    if (productId) {
+      setSelectedProductId(productId);
+    } else if (hwOnly.length > 0) {
+      setSelectedProductId(hwOnly[0].id);
+    }
+    setReplenishQuantity(10);
+    setReplenishModalOpen(true);
   };
 
   const handleReplenish = async (e: React.FormEvent) => {
@@ -137,7 +154,7 @@ export const WarehousesPage: React.FC = () => {
             <RefreshCw className="w-4 h-4" />
           </button>
           <button
-            onClick={() => setReplenishModalOpen(true)}
+            onClick={() => handleOpenReplenish()}
             className="inline-flex items-center justify-center space-x-2 bg-[#0b2b68] hover:bg-blue-900 text-white px-5 py-2.5 rounded-xl font-medium shadow-sm transition"
           >
             <Plus className="w-4 h-4" />
@@ -314,10 +331,7 @@ export const WarehousesPage: React.FC = () => {
                     <td className="py-4 px-6 text-right">
                       {product.category === 'HARDWARE' ? (
                         <button
-                          onClick={() => {
-                            setSelectedProductId(product.id);
-                            setReplenishModalOpen(true);
-                          }}
+                          onClick={() => handleOpenReplenish(product.id)}
                           className="px-3 py-1 bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 rounded-lg text-xs font-semibold transition border border-slate-200"
                         >
                           + Restock
@@ -373,15 +387,19 @@ export const WarehousesPage: React.FC = () => {
                 <select
                   value={selectedProductId}
                   onChange={(e) => setSelectedProductId(e.target.value)}
-                  className="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
+                  className="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 font-medium text-slate-800"
                 >
-                  {products
-                    .filter((p) => p.category === 'HARDWARE')
-                    .map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} (${p.unitPrice})
-                      </option>
-                    ))}
+                  {products.filter((p) => p.category === 'HARDWARE').length === 0 ? (
+                    <option value="">No hardware products available</option>
+                  ) : (
+                    products
+                      .filter((p) => p.category === 'HARDWARE')
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} (${p.unitPrice})
+                        </option>
+                      ))
+                  )}
                 </select>
               </div>
 

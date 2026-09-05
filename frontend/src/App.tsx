@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { Header, NavTab } from './components/Header';
 import { Footer } from './components/Footer';
 import { DashboardPage } from './pages/DashboardPage';
@@ -17,7 +17,31 @@ import { ReportsPage } from './pages/ReportsPage';
 import { LoginPage } from './pages/LoginPage';
 
 const AppContent: React.FC = () => {
+  const { user, portalToken, loading } = useAuth();
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
+        <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        <p className="mt-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+          Initializing DealFlow360...
+        </p>
+      </div>
+    );
+  }
+
+  // If user is not logged in (neither internal user nor customer portal), display the Login & Sign Up page!
+  if (!user && !portalToken) {
+    return (
+      <div className="min-h-screen flex flex-col justify-between bg-slate-100">
+        <div className="flex-1 flex items-center justify-center py-8">
+          <LoginPage onLoginSuccess={() => setActiveTab('dashboard')} />
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f8fafc]">

@@ -59,12 +59,14 @@ export const QuotationsPage: React.FC = () => {
     setLoading(true);
     try {
       const [qList, pList, cList] = await Promise.all([
-        quotationsApi.list(statusFilter ? { status: statusFilter } : undefined),
-        productsApi.list(),
+        quotationsApi.list(statusFilter ? { status: statusFilter } : undefined).catch(() => []),
+        productsApi.list().catch(() => []),
         customersApi.list().catch(() => []),
       ]);
       setQuotations(qList);
-      setProducts(pList);
+      if (pList && pList.length > 0) {
+        setProducts(pList);
+      }
 
       if (cList && cList.length > 0) {
         setCustomers(cList.map((c) => ({ id: c.id, name: c.name, tier: c.tier })));
@@ -73,7 +75,7 @@ export const QuotationsPage: React.FC = () => {
         );
       }
 
-      if (pList.length > 0) {
+      if (pList && pList.length > 0) {
         setFormLines((prev) =>
           prev.length > 0 && prev[0].productId
             ? prev
@@ -106,8 +108,8 @@ export const QuotationsPage: React.FC = () => {
   };
 
   const handleAddLine = () => {
-    if (products.length === 0) return;
-    setFormLines([...formLines, { productId: products[0].id, quantity: 1, discountPercent: 0 }]);
+    const defaultProdId = products.length > 0 ? products[0].id : '';
+    setFormLines([...formLines, { productId: defaultProdId, quantity: 1, discountPercent: 0 }]);
   };
 
   const handleRemoveLine = (index: number) => {
@@ -202,11 +204,32 @@ export const QuotationsPage: React.FC = () => {
     { status: 'CONFIRMED', title: 'Confirmed / Won', dotColor: 'bg-blue-600' },
   ];
 
-  const handleOpenCreateModal = () => {
-    if (customers.length > 0 && (!selectedCustomerId || !customers.some((c) => c.id === selectedCustomerId))) {
-      setSelectedCustomerId(customers[0].id);
+  const handleOpenCreateModal = async () => {
+    let prods = products;
+    if (prods.length === 0) {
+      try {
+        prods = await productsApi.list();
+        setProducts(prods);
+      } catch (e) {
+        console.error('Failed to load products', e);
+      }
     }
-    const defaultProductId = products[0]?.id || '';
+
+    let custs = customers;
+    if (custs.length === 0) {
+      try {
+        const cList = await customersApi.list();
+        custs = cList.map((c) => ({ id: c.id, name: c.name, tier: c.tier }));
+        setCustomers(custs);
+      } catch (e) {
+        console.error('Failed to load customers', e);
+      }
+    }
+
+    if (custs.length > 0 && (!selectedCustomerId || !custs.some((c) => c.id === selectedCustomerId))) {
+      setSelectedCustomerId(custs[0].id);
+    }
+    const defaultProductId = prods.length > 0 ? prods[0].id : '';
     setFormLines([{ productId: defaultProductId, quantity: 1, discountPercent: 5 }]);
     setSubmitForApproval(false);
     setCreateModalOpen(true);
@@ -637,11 +660,15 @@ export const QuotationsPage: React.FC = () => {
                                   onChange={(e) => handleLineChange(idx, 'productId', e.target.value)}
                                   className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800"
                                 >
-                                  {products.map((p) => (
-                                    <option key={p.id} value={p.id}>
-                                      {p.name} (${p.unitPrice}) [Ceil: {p.discountCeiling}%]
-                                    </option>
-                                  ))}
+                                  {products.length === 0 ? (
+                                    <option value="">Loading products catalog...</option>
+                                  ) : (
+                                    products.map((p) => (
+                                      <option key={p.id} value={p.id}>
+                                        {p.name} (${p.unitPrice}) [Ceil: {p.discountCeiling}%]
+                                      </option>
+                                    ))
+                                  )}
                                 </select>
                               </div>
 

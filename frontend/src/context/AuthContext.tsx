@@ -10,6 +10,7 @@ interface AuthContextType {
   activeRole: UserRole | 'PORTAL';
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  signup: (data: { name: string; email: string; password: string; role: UserRole }) => Promise<void>;
   loginAsRole: (role: UserRole | 'PORTAL') => Promise<void>;
   logout: () => void;
   requestPortalAccess: (email: string) => Promise<string>;
@@ -35,21 +36,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [activeRole, setActiveRole] = useState<UserRole | 'PORTAL'>('ADMIN');
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Auto-login as ADMIN on first launch if not logged in
+  // Restore session if valid token exists; otherwise remain logged out so user can sign in or sign up
   useEffect(() => {
     const initializeAuth = async () => {
       const storedToken = localStorage.getItem('dealflow360_token');
+      const storedPortalToken = localStorage.getItem('dealflow360_portal_token');
+
       if (storedToken) {
         try {
           const profile = await authApi.getMe();
           setUser(profile);
           setActiveRole(profile.role);
+          setToken(storedToken);
         } catch {
-          // Fallback to seeded admin
-          await loginAsRole('ADMIN');
+          // Token expired or invalid, clear it
+          localStorage.removeItem('dealflow360_token');
+          setUser(null);
+          setToken(null);
         }
+      } else if (storedPortalToken) {
+        setPortalToken(storedPortalToken);
+        setActiveRole('PORTAL');
       } else {
-        await loginAsRole('ADMIN');
+        setUser(null);
+        setToken(null);
       }
       setLoading(false);
     };
@@ -59,6 +69,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string) => {
     const res = await authApi.login(email, password);
+    setUser(res.user);
+    setToken(res.token);
+    setActiveRole(res.user.role);
+    localStorage.setItem('dealflow360_token', res.token);
+  };
+
+  const signup = async (data: { name: string; email: string; password: string; role: UserRole }) => {
+    const res = await authApi.signup(data);
     setUser(res.user);
     setToken(res.token);
     setActiveRole(res.user.role);
@@ -118,6 +136,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         activeRole,
         loading,
         login,
+        signup,
         loginAsRole,
         logout,
         requestPortalAccess,
