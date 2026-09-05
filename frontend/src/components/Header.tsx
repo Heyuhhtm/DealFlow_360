@@ -47,6 +47,51 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
+  interface AlertNotification {
+    id: string;
+    title: string;
+    description: string;
+    targetTab: NavTab;
+    colorClass: string;
+    read: boolean;
+  }
+
+  const [notifications, setNotifications] = useState<AlertNotification[]>([
+    {
+      id: 'notif-1',
+      title: 'Quotation Approval Required',
+      description: 'Apex Enterprises quote has a 20% discount (exceeds 15% ceiling).',
+      targetTab: 'approvals',
+      colorClass: 'text-slate-900',
+      read: false,
+    },
+    {
+      id: 'notif-2',
+      title: 'Stalled Deal Alert',
+      description: 'Stark Logistics quotation has been inactive for 7 days.',
+      targetTab: 'dealhealth',
+      colorClass: 'text-amber-700',
+      read: false,
+    },
+    {
+      id: 'notif-3',
+      title: 'Customer Counter-Discount',
+      description: 'Wayne Technologies submitted a counter-discount request.',
+      targetTab: 'portal',
+      colorClass: 'text-emerald-700',
+      read: false,
+    },
+  ]);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const handleToggleNotifications = () => {
+    if (!notificationsOpen) {
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    }
+    setNotificationsOpen((prev) => !prev);
+  };
+
   const navItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
     { id: 'quotations', label: 'Quotations', icon: <FileText className="w-4 h-4" /> },
@@ -144,36 +189,60 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
           {/* Notifications Bell */}
           <div className="relative">
             <button
-              onClick={() => setNotificationsOpen(!notificationsOpen)}
-              className="p-2 text-blue-100 hover:text-white hover:bg-blue-800/60 rounded-full relative transition"
+              onClick={handleToggleNotifications}
+              className="p-2 text-blue-100 hover:text-white hover:bg-blue-800/60 rounded-full relative transition cursor-pointer"
               title="Notifications"
             >
               <Bell className="w-5 h-5" />
-              <span className="absolute top-1 right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center border-2 border-[#0b2b68]">
-                3
-              </span>
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center border-2 border-[#0b2b68] animate-pulse">
+                  {unreadCount}
+                </span>
+              )}
             </button>
 
             {/* Notifications Dropdown */}
             {notificationsOpen && (
               <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 text-slate-800 py-2 z-50 animate-in fade-in slide-in-from-top-2">
                 <div className="px-4 py-2 border-b border-slate-100 flex items-center justify-between">
-                  <span className="font-semibold text-sm text-slate-900">Notifications</span>
-                  <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-medium">3 New</span>
+                  <div>
+                    <span className="font-semibold text-sm text-slate-900 block">Notifications</span>
+                    <span className="text-[10px] text-slate-400">
+                      {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
+                    </span>
+                  </div>
+                  {notifications.length > 0 && (
+                    <button
+                      onClick={() => setNotifications([])}
+                      className="text-xs text-slate-400 hover:text-rose-600 font-medium"
+                    >
+                      Clear
+                    </button>
+                  )}
                 </div>
                 <div className="max-h-64 overflow-y-auto divide-y divide-slate-100 text-xs">
-                  <div className="p-3 hover:bg-slate-50 cursor-pointer" onClick={() => { setActiveTab('approvals'); setNotificationsOpen(false); }}>
-                    <div className="font-medium text-slate-900">Quotation Approval Required</div>
-                    <div className="text-slate-500 mt-0.5">Apex Enterprises quote has a 20% discount (exceeds 15% ceiling).</div>
-                  </div>
-                  <div className="p-3 hover:bg-slate-50 cursor-pointer" onClick={() => { setActiveTab('dealhealth'); setNotificationsOpen(false); }}>
-                    <div className="font-medium text-amber-700">Stalled Deal Alert</div>
-                    <div className="text-slate-500 mt-0.5">Stark Logistics quotation has been inactive for 7 days.</div>
-                  </div>
-                  <div className="p-3 hover:bg-slate-50 cursor-pointer" onClick={() => { setActiveTab('portal'); setNotificationsOpen(false); }}>
-                    <div className="font-medium text-emerald-700">Customer Counter-Discount</div>
-                    <div className="text-slate-500 mt-0.5">Wayne Technologies submitted a counter-discount request.</div>
-                  </div>
+                  {notifications.length > 0 ? (
+                    notifications.map((n) => (
+                      <div
+                        key={n.id}
+                        className="p-3 hover:bg-slate-50 cursor-pointer"
+                        onClick={() => {
+                          setNotifications((prev) =>
+                            prev.map((item) => (item.id === n.id ? { ...item, read: true } : item))
+                          );
+                          setActiveTab(n.targetTab);
+                          setNotificationsOpen(false);
+                        }}
+                      >
+                        <div className={`font-medium ${n.colorClass}`}>{n.title}</div>
+                        <div className="text-slate-500 mt-0.5">{n.description}</div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-4 text-center text-slate-400 text-xs">
+                      No notifications
+                    </div>
+                  )}
                 </div>
               </div>
             )}
