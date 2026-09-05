@@ -21,6 +21,7 @@ import {
   User as UserIcon,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
 import { UserRole } from '../types';
 
 export type NavTab =
@@ -113,71 +114,43 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setMobileOpen,
 }) => {
   const { user, logout, switchAccount } = useAuth();
+  const {
+    notifications,
+    unreadCount,
+    markAllAsRead,
+    dismissNotification,
+    clearAllNotifications,
+    setTargetQuotationToOpen,
+  } = useNotifications();
   const [profilePopoverOpen, setProfilePopoverOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
-  interface AlertNotification {
-    id: string;
-    title: string;
-    description: string;
-    targetTab: NavTab;
-    colorClass: string;
-    read: boolean;
-  }
-
-  const [notifications, setNotifications] = useState<AlertNotification[]>([
-    {
-      id: 'notif-1',
-      title: 'Approval Required (High Risk)',
-      description: 'Apex Enterprises discount overage exceeds threshold (>5%).',
-      targetTab: 'approvals',
-      colorClass: 'text-blue-700',
-      read: false,
-    },
-    {
-      id: 'notif-2',
-      title: 'Stalled Deal Alert',
-      description: 'Stark Logistics quotation inactive for 7+ days. Automated nudge ready.',
-      targetTab: 'dealhealth',
-      colorClass: 'text-amber-600',
-      read: false,
-    },
-    {
-      id: 'notif-3',
-      title: 'Customer Counter-Offer',
-      description: 'Wayne Tech requested 15% discount counter-proposal.',
-      targetTab: 'portal',
-      colorClass: 'text-emerald-700',
-      read: false,
-    },
-  ]);
-
-  const unreadCount = notifications.filter((n) => !n.read).length;
-
   const handleToggleNotifications = () => {
     if (!notificationsOpen) {
-      // Mark all notifications as read when opening so the number (2, 3) is removed from the notification icon!
-      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      // Mark all notifications as read when opening so the count is removed from the notification icon
+      markAllAsRead();
     }
     setNotificationsOpen((prev) => !prev);
   };
 
-  const handleNotificationClick = (notif: AlertNotification) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === notif.id ? { ...n, read: true } : n))
-    );
-    setActiveTab(notif.targetTab);
+  const handleNotificationClick = (notif: any) => {
+    if (notif.quotationId) {
+      setTargetQuotationToOpen(notif.quotationId);
+      setActiveTab('quotations');
+    } else {
+      setActiveTab((notif.targetTab as NavTab) || 'quotations');
+    }
     setNotificationsOpen(false);
   };
 
   const handleDismissNotification = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    dismissNotification(id);
   };
 
   const handleClearNotifications = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setNotifications([]);
+    clearAllNotifications();
   };
 
   const popoverRef = useRef<HTMLDivElement>(null);

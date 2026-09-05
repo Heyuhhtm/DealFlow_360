@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, UserRole } from '../types';
 import { authApi } from '../services/api';
+import { disconnectSocket } from '../lib/socket';
 
 interface AuthContextType {
   user: User | null;
@@ -114,7 +115,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('dealflow360_portal_email');
     sessionStorage.clear();
 
-    // 3. Clear any memory query caches if present
+    // 3. Disconnect real-time WebSocket connection and remove all listeners
+    disconnectSocket();
+
+    // 4. Clear any memory query caches if present
     if (typeof window !== 'undefined') {
       if ((window as any).__REACT_QUERY_CLIENT__) {
         (window as any).__REACT_QUERY_CLIENT__.clear();

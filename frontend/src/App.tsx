@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { NotificationProvider } from './context/NotificationContext';
+import { NotificationToast } from './components/NotificationToast';
 import { Sidebar, NavTab, ROLE_NAVIGATION_MAP, getRolesForTab } from './components/Sidebar';
 import { PortalLayout, PortalRoute } from './components/PortalLayout';
 import { RoleGuard } from './components/RoleGuard';
@@ -506,6 +508,14 @@ const AppContent: React.FC = () => {
           }}
         />
       </div>
+
+      {/* Cross-App Real-Time Message Notification Toast */}
+      <NotificationToast
+        onOpenQuotation={(quotationId) => {
+          setActiveTab('quotations');
+          window.history.pushState(null, '', '/quotations');
+        }}
+      />
     </div>
   );
 };
@@ -513,7 +523,9 @@ const AppContent: React.FC = () => {
 export default function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <NotificationProvider>
+        <AppContent />
+      </NotificationProvider>
     </AuthProvider>
   );
 }

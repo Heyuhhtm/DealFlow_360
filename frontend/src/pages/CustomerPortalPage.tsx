@@ -571,6 +571,7 @@ export const CustomerPortalPage: React.FC<CustomerPortalPageProps> = ({
                 token={portalToken || ''}
                 isPortal={true}
                 currentUserEmail={portalCustomerEmail || ''}
+                currentStatus={quotation.status}
                 onStatusChanged={(data: { quotationId: string; newStatus: string }) => {
                   setQuotation((prev: any) => (prev ? { ...prev, status: data.newStatus } : prev));
                 }}

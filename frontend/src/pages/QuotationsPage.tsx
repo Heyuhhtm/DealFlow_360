@@ -35,6 +35,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
 import { NegotiationThread } from '../components/NegotiationThread';
 
 export const QuotationsPage: React.FC = () => {
@@ -46,10 +47,26 @@ export const QuotationsPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
 
+  // Notification Context
+  const {
+    setActiveQuotationId,
+    clearQuotationNotifications,
+    targetQuotationToOpen,
+    setTargetQuotationToOpen,
+  } = useNotifications();
+
   // Modals & Detail
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [selectedQuotation, setSelectedQuotation] = useState<Quotation | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+
+  // Auto-open quotation when requested from cross-app notification or toast
+  useEffect(() => {
+    if (targetQuotationToOpen) {
+      handleOpenDetail(targetQuotationToOpen);
+      setTargetQuotationToOpen(null);
+    }
+  }, [targetQuotationToOpen]);
 
   // PDF & Email State
   const [pdfLoading, setPdfLoading] = useState<'view' | 'download' | null>(null);
@@ -131,6 +148,8 @@ export const QuotationsPage: React.FC = () => {
     setEmailSuccessResult(null);
     setEmailError(null);
     setEmailConfirmOpen(false);
+    setActiveQuotationId(id);
+    clearQuotationNotifications(id);
     try {
       const q = await quotationsApi.getById(id);
       setSelectedQuotation(q);
@@ -1075,7 +1094,10 @@ export const QuotationsPage: React.FC = () => {
               </div>
 
               <button
-                onClick={() => setSelectedQuotation(null)}
+                onClick={() => {
+                  setSelectedQuotation(null);
+                  setActiveQuotationId(null);
+                }}
                 className="p-1.5 text-slate-400 hover:text-slate-600 text-lg rounded-lg cursor-pointer"
                 title="Close modal"
               >
@@ -1247,6 +1269,7 @@ export const QuotationsPage: React.FC = () => {
                   isPortal={false}
                   currentUserEmail={user?.email}
                   currentUserName={user?.name}
+                  currentStatus={selectedQuotation.status}
                   onStatusChanged={(data: { quotationId: string; newStatus: string }) => {
                     setSelectedQuotation((prev) => (prev ? { ...prev, status: data.newStatus as any } : prev));
                     setQuotations((prev) =>
