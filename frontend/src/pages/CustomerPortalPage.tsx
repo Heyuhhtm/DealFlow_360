@@ -20,6 +20,8 @@ import {
   Loader2,
 } from 'lucide-react';
 import { StatusBadge } from '../components/StatusBadge';
+import { NegotiationThread } from '../components/NegotiationThread';
+import { subscribeToQuotation } from '../services/socket';
 
 interface CustomerPortalPageProps {
   currentRoute?: 'quotation' | 'messages' | 'profile';
@@ -102,6 +104,33 @@ export const CustomerPortalPage: React.FC<CustomerPortalPageProps> = ({
 
     fetchPortalData();
   }, [portalToken]);
+
+  // Real-time Push Listener (Socket.io)
+  useEffect(() => {
+    if (!quotation?.id || !portalToken) return;
+
+    const unsubscribe = subscribeToQuotation({
+      quotationId: quotation.id,
+      token: portalToken,
+      onCommentReceived: (newComment: any) => {
+        setQuotation((prev: any) => {
+          if (!prev) return prev;
+          if (prev.portalComments?.some((c: any) => c.id === newComment.id)) return prev;
+          return {
+            ...prev,
+            portalComments: [...(prev.portalComments || []), newComment],
+          };
+        });
+      },
+      onQuotationUpdated: (data: any) => {
+        if (data.status) {
+          setQuotation((prev: any) => (prev ? { ...prev, status: data.status } : prev));
+        }
+      },
+    });
+
+    return () => unsubscribe();
+  }, [quotation?.id, portalToken]);
 
   const handleCounterDiscount = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -531,58 +560,19 @@ export const CustomerPortalPage: React.FC<CustomerPortalPageProps> = ({
             <div>
               <h3 className="text-2xl font-bold text-slate-900">Negotiation Thread &amp; Messages</h3>
               <p className="text-sm text-slate-500 mt-1">
-                Direct messaging thread between Apex Enterprises and the DealFlow360 account team.
+                Direct real-time messaging between your team and the DealFlow360 account executives.
               </p>
             </div>
 
-            <div className="bg-slate-50 rounded-2xl border border-slate-200 p-4 min-h-[300px] flex flex-col justify-between">
-              <div className="space-y-3 mb-6 max-h-96 overflow-y-auto pr-2">
-                {quotation?.portalComments && quotation.portalComments.length > 0 ? (
-                  quotation.portalComments.map((comment: any) => {
-                    const isCustomer = comment.author?.toLowerCase().includes('customer') || comment.author?.toLowerCase().includes('apex');
-                    return (
-                      <div
-                        key={comment.id}
-                        className={`p-4 rounded-xl text-xs max-w-lg ${
-                          isCustomer
-                            ? 'ml-auto bg-blue-600 text-white shadow-sm'
-                            : 'bg-white border border-slate-200 text-slate-800 shadow-xs'
-                        }`}
-                      >
-                        <div className={`flex items-center justify-between mb-1 text-[11px] ${isCustomer ? 'text-blue-200' : 'text-slate-500'}`}>
-                          <span className="font-bold">{comment.author}</span>
-                          <span>{new Date(comment.createdAt).toLocaleString()}</span>
-                        </div>
-                        <p className={`text-sm ${isCustomer ? 'text-white' : 'text-slate-700'}`}>{comment.message}</p>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className="text-center py-12 text-slate-400">
-                    <MessageSquare className="w-10 h-10 mx-auto text-slate-300 mb-2" />
-                    <p className="font-medium text-sm">No messages yet</p>
-                    <p className="text-xs">Post a question or note below to start the conversation.</p>
-                  </div>
-                )}
-              </div>
-
-              <form onSubmit={handleAddComment} className="flex gap-2 pt-3 border-t border-slate-200">
-                <input
-                  type="text"
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  placeholder="Type a message to Sarah Connor (Account Executive)..."
-                  className="flex-1 px-4 py-2.5 text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-sm transition cursor-pointer"
-                >
-                  <Send className="w-4 h-4" />
-                  <span>Send</span>
-                </button>
-              </form>
-            </div>
+            {quotation && (
+              <NegotiationThread
+                quotationId={quotation.id}
+                initialComments={quotation.portalComments || []}
+                token={portalToken || ''}
+                isPortal={true}
+                currentUserEmail={portalCustomerEmail || ''}
+              />
+            )}
           </div>
         )}
 

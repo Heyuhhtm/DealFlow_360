@@ -104,6 +104,10 @@ export const quotationsApi = {
     );
     return res.data;
   },
+  addComment: async (id: string, data: { lineId?: string; message: string }) => {
+    const res = await api.post(`/quotations/${id}/comments`, data);
+    return res.data;
+  },
 };
 
 // Approvals API

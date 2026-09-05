@@ -35,9 +35,10 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { NegotiationThread } from '../components/NegotiationThread';
 
 export const QuotationsPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [quotations, setQuotations] = useState<QuotationListItem[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1235,6 +1236,18 @@ export const QuotationsPage: React.FC = () => {
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* Live Real-Time Negotiation & Customer Messaging Thread */}
+              <div className="pt-2">
+                <NegotiationThread
+                  quotationId={selectedQuotation.id}
+                  initialComments={selectedQuotation.portalComments || []}
+                  token={token || ''}
+                  isPortal={false}
+                  currentUserEmail={user?.email}
+                  currentUserName={user?.name}
+                />
               </div>
             </div>
 

@@ -1,6 +1,9 @@
 import express, { Application, Request, Response } from 'express';
+import http from 'node:http';
+import { Server } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { initSocket, io } from './lib/socket';
 
 // Load environment variables
 dotenv.config();
@@ -21,6 +24,12 @@ import { errorHandler } from './middleware/error.middleware';
 const app: Application = express();
 const PORT = process.env.PORT || 4000;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+// Create raw HTTP server wrapping Express app
+const httpServer = http.createServer(app);
+
+// Attach Socket.io server to httpServer with cors
+initSocket(httpServer, FRONTEND_URL);
 
 // Global middleware
 app.use(
@@ -62,9 +71,11 @@ app.use('/api/customers', customersRoutes);
 app.use(errorHandler);
 
 if (process.env.NODE_ENV !== 'test') {
-  app.listen(PORT, () => {
-    console.log(`🚀 DealFlow360 server running on port ${PORT}`);
+  httpServer.listen(PORT, () => {
+    console.log(`🚀 DealFlow360 server running on port ${PORT} (with Socket.io real-time engine)`);
   });
 }
 
+export { httpServer, io };
 export default app;
+

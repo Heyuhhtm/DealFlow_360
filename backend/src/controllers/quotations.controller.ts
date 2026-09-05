@@ -7,6 +7,8 @@ import { calculateBlendedRiskScore, determineApprovalRequirements } from '../ser
 import { QuotationStatus, ApprovalRole, ApprovalStatus } from '@prisma/client';
 import { generateQuotationPDF } from '../services/pdf.service';
 import { sendQuotationEmail } from '../services/email.service';
+import { getIO } from '../lib/socket';
+import { portalCommentSchema } from './portal.controller';
 
 export const quotationLineSchema = z.object({
   productId: z.string().uuid('Invalid product ID'),
@@ -681,4 +683,57 @@ export const emailQuotationToCustomer = async (req: Request, res: Response): Pro
     messageId: emailResult.messageId,
   });
 };
+
+export const addQuotationComment = async (req: Request, res: Response): Promise<void> => {
+  const id = String(req.params.id);
+  const user = req.user;
+  const { lineId, message } = portalCommentSchema.parse(req.body);
+
+  if (!user) {
+    throw new AppError('Authentication required', 401);
+  }
+
+  const quotation = await prisma.quotation.findUnique({
+    where: { id },
+  });
+
+  if (!quotation) {
+    throw new AppError('Quotation not found', 404);
+  }
+
+  const author = user.name ? `${user.name} (${user.role})` : user.email || 'Sales Team';
+
+  const comment = await prisma.portalComment.create({
+    data: {
+      quotationId: id,
+      lineId: lineId || null,
+      author,
+      message: message.trim(),
+    },
+  });
+
+  await prisma.quotation.update({
+    where: { id },
+    data: { lastActivityAt: new Date() },
+  });
+
+  const payload = {
+    id: comment.id,
+    quotationId: id,
+    lineId: comment.lineId,
+    author: comment.author,
+    message: comment.message,
+    createdAt: comment.createdAt,
+  };
+
+  try {
+    getIO()?.to(`quotation:${id}`).emit('new-comment', payload);
+    getIO()?.to(`quotation:${id}`).emit('new-message', payload);
+  } catch (err) {
+    console.error('[Socket.io] Failed to emit comment event:', err);
+  }
+
+  res.status(201).json(payload);
+};
+
 

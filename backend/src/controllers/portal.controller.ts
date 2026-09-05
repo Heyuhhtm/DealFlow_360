@@ -6,6 +6,7 @@ import { calculateLineTotal, calculateOrderTotals, calculateOrderMargin } from '
 import { calculateBlendedRiskScore, determineApprovalRequirements } from '../services/risk.service';
 import { QuotationStatus, ApprovalRole, ApprovalStatus } from '@prisma/client';
 import { generateQuotationPDF } from '../services/pdf.service';
+import { getIO } from '../lib/socket';
 
 export const portalCommentSchema = z.object({
   lineId: z.string().uuid().optional(),
@@ -174,13 +175,24 @@ export const addPortalComment = async (req: Request, res: Response): Promise<voi
     data: { lastActivityAt: new Date() },
   });
 
-  res.status(201).json({
+  const payload = {
     id: comment.id,
+    quotationId: id,
     lineId: comment.lineId,
     author: comment.author,
     message: comment.message,
     createdAt: comment.createdAt,
-  });
+  };
+
+  // Push real-time event to everyone viewing this quotation
+  try {
+    getIO()?.to(`quotation:${id}`).emit('new-comment', payload);
+    getIO()?.to(`quotation:${id}`).emit('new-message', payload);
+  } catch (err) {
+    console.error('[Socket.io] Failed to emit comment event:', err);
+  }
+
+  res.status(201).json(payload);
 };
 
 export const counterDiscount = async (req: Request, res: Response): Promise<void> => {
@@ -341,6 +353,27 @@ export const counterDiscount = async (req: Request, res: Response): Promise<void
       },
     });
   });
+
+  // Push real-time event to everyone viewing this quotation
+  try {
+    const payload = {
+      quotationId: id,
+      lineId: targetLineId || null,
+      author: req.customer?.email || 'Customer',
+      message: `Proposed counter-discount: ${proposedDiscountPercent}%. Reason: ${justification}`,
+      createdAt: new Date(),
+    };
+    getIO()?.to(`quotation:${id}`).emit('new-comment', payload);
+    getIO()?.to(`quotation:${id}`).emit('new-message', payload);
+    getIO()?.to(`quotation:${id}`).emit('quotation-updated', {
+      quotationId: id,
+      status: newQuotationStatus,
+      blendedRiskScore,
+      reenteredApproval,
+    });
+  } catch (err) {
+    console.error('[Socket.io] Failed to emit counterDiscount event:', err);
+  }
 
   res.status(200).json({
     quotationStatus: newQuotationStatus,
