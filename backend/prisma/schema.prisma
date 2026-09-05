@@ -1,0 +1,229 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SALES_REP
+  SALES_MANAGER
+  FINANCE
+  ADMIN
+}
+
+enum CustomerTier {
+  BRONZE
+  SILVER
+  GOLD
+}
+
+enum ProductCategory {
+  HARDWARE
+  SERVICE
+  SUBSCRIPTION
+}
+
+enum QuotationStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  UNDER_NEGOTIATION
+  CONFIRMED
+}
+
+enum ApprovalRole {
+  SALES_MANAGER
+  FINANCE
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  RETURNED
+}
+
+enum BillingCycle {
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum AlertType {
+  STALLED
+  DISCOUNT_ANOMALY
+  DELIVERY_SLIPPAGE
+}
+
+model User {
+  id            String    @id @default(uuid())
+  name          String
+  email         String    @unique
+  passwordHash  String
+  role          UserRole
+  createdAt     DateTime  @default(now())
+
+  quotations    Quotation[]      @relation("RepQuotations")
+  approvalSteps ApprovalStep[]
+  auditEntries  AuditLogEntry[]
+}
+
+model Customer {
+  id         String        @id @default(uuid())
+  name       String
+  email      String        @unique
+  tier       CustomerTier
+  createdAt  DateTime      @default(now())
+
+  quotations Quotation[]
+}
+
+model Product {
+  id                String           @id @default(uuid())
+  name              String
+  category          ProductCategory
+  unitPrice         Float
+  marginPercent     Float
+  discountCeiling   Float            // max allowed discount % for this product's category
+  billingCycle      BillingCycle?    // only set if category = SUBSCRIPTION
+  createdAt         DateTime         @default(now())
+
+  quotationLines    QuotationLine[]
+  warehouseStock    WarehouseStock[]
+}
+
+model Warehouse {
+  id                String            @id @default(uuid())
+  name              String
+  shippingCostBase  Float             @default(10)
+  createdAt         DateTime          @default(now())
+
+  stock             WarehouseStock[]
+  splits            WarehouseSplit[]
+}
+
+model WarehouseStock {
+  id           String     @id @default(uuid())
+  warehouseId  String
+  productId    String
+  quantity     Int
+
+  warehouse    Warehouse  @relation(fields: [warehouseId], references: [id])
+  product      Product    @relation(fields: [productId], references: [id])
+
+  @@unique([warehouseId, productId])
+}
+
+model Quotation {
+  id                      String            @id @default(uuid())
+  customerId              String
+  repId                   String
+  status                  QuotationStatus   @default(DRAFT)
+  blendedRiskScore         Float            @default(0)
+  requiresManagerApproval  Boolean          @default(false)
+  requiresFinanceApproval  Boolean          @default(false)
+  subtotal                Float             @default(0)
+  totalDiscount           Float             @default(0)
+  total                   Float             @default(0)
+  marginPercent           Float             @default(0)
+  lastActivityAt          DateTime          @default(now())
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+
+  customer                Customer          @relation(fields: [customerId], references: [id])
+  rep                     User              @relation("RepQuotations", fields: [repId], references: [id])
+  lines                   QuotationLine[]
+  approvalSteps           ApprovalStep[]
+  auditEntries            AuditLogEntry[]
+  warehouseSplits         WarehouseSplit[]
+  subscriptionBillings    SubscriptionBilling[]
+  portalComments          PortalComment[]
+  dealHealthAlerts        DealHealthAlert[]
+}
+
+model QuotationLine {
+  id               String      @id @default(uuid())
+  quotationId      String
+  productId        String
+  quantity         Int
+  unitPrice        Float
+  discountPercent  Float       @default(0)
+  lineTotal        Float
+
+  quotation        Quotation   @relation(fields: [quotationId], references: [id])
+  product          Product     @relation(fields: [productId], references: [id])
+}
+
+model ApprovalStep {
+  id             String          @id @default(uuid())
+  quotationId    String
+  approverRole   ApprovalRole
+  status         ApprovalStatus  @default(PENDING)
+  actedById      String?
+  reason         String?
+  sequence       Int             // 1 = Sales Manager, 2 = Finance
+  createdAt      DateTime        @default(now())
+  actedAt        DateTime?
+
+  quotation      Quotation       @relation(fields: [quotationId], references: [id])
+  actedBy        User?           @relation(fields: [actedById], references: [id])
+}
+
+model AuditLogEntry {
+  id            String     @id @default(uuid())
+  quotationId   String
+  userId        String
+  action        String     // e.g. "APPROVED", "REJECTED", "EDITED_LINE", "COUNTER_DISCOUNT"
+  detail        String?
+  createdAt     DateTime   @default(now())
+
+  quotation     Quotation  @relation(fields: [quotationId], references: [id])
+  user          User       @relation(fields: [userId], references: [id])
+}
+
+model WarehouseSplit {
+  id                    String      @id @default(uuid())
+  quotationId           String
+  warehouseId           String
+  quantityFulfilled     Int
+  estimatedShipmentCost Float
+
+  quotation             Quotation   @relation(fields: [quotationId], references: [id])
+  warehouse             Warehouse   @relation(fields: [warehouseId], references: [id])
+}
+
+model SubscriptionBilling {
+  id              String        @id @default(uuid())
+  quotationId     String
+  productId       String
+  billingCycle    BillingCycle
+  nextBillingDate DateTime
+  amount          Float
+
+  quotation       Quotation     @relation(fields: [quotationId], references: [id])
+}
+
+model PortalComment {
+  id           String     @id @default(uuid())
+  quotationId  String
+  lineId       String?
+  author       String
+  message      String
+  createdAt    DateTime   @default(now())
+
+  quotation    Quotation  @relation(fields: [quotationId], references: [id])
+}
+
+model DealHealthAlert {
+  id           String     @id @default(uuid())
+  quotationId  String
+  type         AlertType
+  message      String
+  createdAt    DateTime   @default(now())
+
+  quotation    Quotation  @relation(fields: [quotationId], references: [id])
+}
