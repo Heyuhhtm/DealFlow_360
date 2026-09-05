@@ -1073,56 +1073,13 @@ export const QuotationsPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Action Buttons (Prompt C2 & C4) */}
-              <div className="flex items-center space-x-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => handleViewPdf(selectedQuotation.id)}
-                  disabled={pdfLoading === 'view'}
-                  className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold flex items-center space-x-1.5 shadow-2xs transition cursor-pointer disabled:opacity-50"
-                  title="View official commercial quotation PDF in new browser tab"
-                >
-                  {pdfLoading === 'view' ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <FileText className="w-3.5 h-3.5 text-blue-600" />
-                  )}
-                  <span>View PDF</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleDownloadPdf(selectedQuotation.id)}
-                  disabled={pdfLoading === 'download'}
-                  className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold flex items-center space-x-1.5 shadow-2xs transition cursor-pointer disabled:opacity-50"
-                  title="Download quotation PDF copy"
-                >
-                  {pdfLoading === 'download' ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Download className="w-3.5 h-3.5 text-slate-600" />
-                  )}
-                  <span>Download PDF</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setEmailConfirmOpen(true)}
-                  className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold flex items-center space-x-1.5 shadow-xs transition cursor-pointer"
-                  title="Email quotation PDF to customer"
-                >
-                  <Mail className="w-3.5 h-3.5" />
-                  <span>Email to Customer</span>
-                </button>
-
-                <button
-                  onClick={() => setSelectedQuotation(null)}
-                  className="p-1.5 text-slate-400 hover:text-slate-600 text-lg rounded-lg cursor-pointer"
-                  title="Close modal"
-                >
-                  ✕
-                </button>
-              </div>
+              <button
+                onClick={() => setSelectedQuotation(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 text-lg rounded-lg cursor-pointer"
+                title="Close modal"
+              >
+                ✕
+              </button>
             </div>
 
             {/* Email Success Banner with Ethereal Live Preview Link */}
