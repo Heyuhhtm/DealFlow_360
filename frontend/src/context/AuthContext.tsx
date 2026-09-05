@@ -11,7 +11,6 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (data: { name: string; email: string; password: string; role: UserRole }) => Promise<void>;
-  loginAsRole: (role: UserRole | 'PORTAL') => Promise<void>;
   logout: () => void;
   switchAccount: () => void;
   requestPortalAccess: (email: string) => Promise<string>;
@@ -19,12 +18,16 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const SEEDED_ACCOUNTS = {
-  ADMIN: { email: 'admin@dealflow360.com', name: 'David Wallace (Admin)', role: 'ADMIN' as UserRole },
-  SALES_REP: { email: 'rep@dealflow360.com', name: 'Sarah Connor (Sales Rep)', role: 'SALES_REP' as UserRole },
-  SALES_MANAGER: { email: 'manager@dealflow360.com', name: 'Michael Scott (Sales Manager)', role: 'SALES_MANAGER' as UserRole },
-  FINANCE: { email: 'finance@dealflow360.com', name: 'Angela Martin (Finance)', role: 'FINANCE' as UserRole },
-  PORTAL: { email: 'deals@apexenterprises.com', name: 'Apex Enterprises (Customer)', role: 'PORTAL' as const },
+export const DEMO_CREDENTIALS = [
+  { role: 'Sales Rep', name: 'Sarah Connor', email: 'sarah@dealflow360.com', password: 'password123', badgeColor: 'bg-blue-100 text-blue-800' },
+  { role: 'Sales Manager', name: 'Michael Scott', email: 'michael@dealflow360.com', password: 'password123', badgeColor: 'bg-amber-100 text-amber-800' },
+  { role: 'Finance', name: 'Angela Martin', email: 'angela@dealflow360.com', password: 'password123', badgeColor: 'bg-emerald-100 text-emerald-800' },
+  { role: 'Admin', name: 'David Wallace', email: 'david@dealflow360.com', password: 'password123', badgeColor: 'bg-purple-100 text-purple-800' },
+];
+
+export const DEMO_PORTAL_CUSTOMER = {
+  name: 'Apex Enterprises (Gold Tier)',
+  email: 'deals@apexenterprises.com',
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -84,30 +87,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('dealflow360_token', res.token);
   };
 
-  const loginAsRole = async (role: UserRole | 'PORTAL') => {
-    if (role === 'PORTAL') {
-      const email = SEEDED_ACCOUNTS.PORTAL.email;
-      const res = await authApi.portalMagicLink(email);
-      setPortalToken(res.magicLinkToken);
-      setPortalCustomerEmail(email);
-      setActiveRole('PORTAL');
-      localStorage.setItem('dealflow360_portal_token', res.magicLinkToken);
-      localStorage.setItem('dealflow360_portal_email', email);
-      return;
-    }
-
-    const account = SEEDED_ACCOUNTS[role];
-    try {
-      const res = await authApi.login(account.email, 'password123');
-      setUser(res.user);
-      setToken(res.token);
-      setActiveRole(res.user.role);
-      localStorage.setItem('dealflow360_token', res.token);
-    } catch (e) {
-      console.error(`Failed to login as ${role}:`, e);
-    }
-  };
-
   const requestPortalAccess = async (email: string) => {
     const res = await authApi.portalMagicLink(email);
     setPortalToken(res.magicLinkToken);
@@ -162,7 +141,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loading,
         login,
         signup,
-        loginAsRole,
         logout,
         switchAccount,
         requestPortalAccess,

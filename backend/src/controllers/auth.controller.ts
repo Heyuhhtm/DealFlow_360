@@ -69,11 +69,21 @@ export const signup = async (req: Request, res: Response): Promise<void> => {
   });
 };
 
+const DEMO_EMAIL_ALIASES: Record<string, string> = {
+  'david@dealflow360.com': 'admin@dealflow360.com',
+  'sarah@dealflow360.com': 'rep@dealflow360.com',
+  'michael@dealflow360.com': 'manager@dealflow360.com',
+  'angela@dealflow360.com': 'finance@dealflow360.com',
+};
+
 export const login = async (req: Request, res: Response): Promise<void> => {
   const { email, password } = loginSchema.parse(req.body);
 
+  const normalizedEmail = email.toLowerCase().trim();
+  const targetEmail = DEMO_EMAIL_ALIASES[normalizedEmail] || normalizedEmail;
+
   const user = await prisma.user.findUnique({
-    where: { email: email.toLowerCase() },
+    where: { email: targetEmail },
   });
 
   if (!user) {

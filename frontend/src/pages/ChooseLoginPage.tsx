@@ -14,7 +14,7 @@ import {
   CheckCircle2,
   Send,
 } from 'lucide-react';
-import { useAuth, SEEDED_ACCOUNTS } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types';
 
 interface ChooseLoginPageProps {
@@ -22,7 +22,7 @@ interface ChooseLoginPageProps {
 }
 
 export const ChooseLoginPage: React.FC<ChooseLoginPageProps> = ({ onLoginSuccess }) => {
-  const { login, signup, loginAsRole, requestPortalAccess } = useAuth();
+  const { login, signup, requestPortalAccess } = useAuth();
 
   // Selected flow: null (choice screen), 'internal' (team login), 'portal' (customer portal)
   const [selectedFlow, setSelectedFlow] = useState<'internal' | 'portal' | null>(null);
@@ -89,20 +89,6 @@ export const ChooseLoginPage: React.FC<ChooseLoginPageProps> = ({ onLoginSuccess
       setErrorMessage(
         err.response?.data?.error?.message || 'Failed to create account. Email may already be registered.'
       );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleQuickPersona = async (role: UserRole | 'PORTAL') => {
-    setErrorMessage('');
-    setSuccessMessage('');
-    setLoading(true);
-    try {
-      await loginAsRole(role);
-      onLoginSuccess();
-    } catch (err: any) {
-      setErrorMessage('Failed to sign in as selected role.');
     } finally {
       setLoading(false);
     }
@@ -270,7 +256,7 @@ export const ChooseLoginPage: React.FC<ChooseLoginPageProps> = ({ onLoginSuccess
               </div>
 
               <p className="text-blue-200 text-xs mt-3 leading-relaxed">
-                Sign in with your enterprise credentials or launch directly with pre-configured demo personas.
+                Sign in with your enterprise credentials or use the provided demo test accounts.
               </p>
             </div>
 
@@ -462,55 +448,45 @@ export const ChooseLoginPage: React.FC<ChooseLoginPageProps> = ({ onLoginSuccess
                 </form>
               )}
 
-              {/* Demo Persona Quick Buttons */}
+              {/* Demo credentials reference block (strictly non-interactive reference for judges/testing) */}
               {internalMode === 'signin' && (
-                <>
-                  <div className="relative my-5">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-slate-200"></div>
-                    </div>
-                    <div className="relative flex justify-center text-[10px] uppercase">
-                      <span className="bg-white px-2.5 text-slate-400 font-bold tracking-wider">
-                        1-Click Staff Persona Login
+                <div className="mt-6 pt-5 border-t border-slate-200">
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                        Demo credentials (for judges/testing)
+                      </span>
+                      <span className="text-[10px] bg-slate-200 text-slate-700 font-mono font-semibold px-2 py-0.5 rounded-full">
+                        Password: password123
                       </span>
                     </div>
+                    <p className="text-[11px] text-slate-500 mb-3">
+                      Type or copy credentials into the form fields above to authenticate via standard JWT:
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono">
+                      <div className="p-2.5 bg-white rounded-xl border border-slate-200 select-all">
+                        <span className="font-bold font-sans text-blue-700 text-[11px] block">💼 Sales Rep</span>
+                        <span className="text-slate-800 text-[11px] block">sarah@dealflow360.com</span>
+                        <span className="text-[10px] text-slate-400 font-sans">Sarah Connor</span>
+                      </div>
+                      <div className="p-2.5 bg-white rounded-xl border border-slate-200 select-all">
+                        <span className="font-bold font-sans text-amber-700 text-[11px] block">👔 Sales Manager</span>
+                        <span className="text-slate-800 text-[11px] block">michael@dealflow360.com</span>
+                        <span className="text-[10px] text-slate-400 font-sans">Michael Scott</span>
+                      </div>
+                      <div className="p-2.5 bg-white rounded-xl border border-slate-200 select-all">
+                        <span className="font-bold font-sans text-emerald-700 text-[11px] block">💰 Finance</span>
+                        <span className="text-slate-800 text-[11px] block">angela@dealflow360.com</span>
+                        <span className="text-[10px] text-slate-400 font-sans">Angela Martin</span>
+                      </div>
+                      <div className="p-2.5 bg-white rounded-xl border border-slate-200 select-all">
+                        <span className="font-bold font-sans text-purple-700 text-[11px] block">👑 Admin</span>
+                        <span className="text-slate-800 text-[11px] block">david@dealflow360.com</span>
+                        <span className="text-[10px] text-slate-400 font-sans">David Wallace</span>
+                      </div>
+                    </div>
                   </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <button
-                      type="button"
-                      onClick={() => handleQuickPersona('SALES_REP')}
-                      className="p-2 bg-slate-50 hover:bg-blue-50 text-slate-800 rounded-xl border border-slate-200 text-left transition cursor-pointer"
-                    >
-                      <span className="font-bold block text-blue-700">💼 Sales Rep</span>
-                      <span className="text-[10px] text-slate-500">Sarah Connor</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleQuickPersona('SALES_MANAGER')}
-                      className="p-2 bg-slate-50 hover:bg-amber-50 text-slate-800 rounded-xl border border-slate-200 text-left transition cursor-pointer"
-                    >
-                      <span className="font-bold block text-amber-700">👔 Sales Manager</span>
-                      <span className="text-[10px] text-slate-500">Michael Scott</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleQuickPersona('FINANCE')}
-                      className="p-2 bg-slate-50 hover:bg-emerald-50 text-slate-800 rounded-xl border border-slate-200 text-left transition cursor-pointer"
-                    >
-                      <span className="font-bold block text-emerald-700">💰 Finance</span>
-                      <span className="text-[10px] text-slate-500">Angela Martin</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleQuickPersona('ADMIN')}
-                      className="p-2 bg-slate-50 hover:bg-purple-50 text-slate-800 rounded-xl border border-slate-200 text-left transition cursor-pointer"
-                    >
-                      <span className="font-bold block text-purple-700">👑 Admin</span>
-                      <span className="text-[10px] text-slate-500">David Wallace</span>
-                    </button>
-                  </div>
-                </>
+                </div>
               )}
             </div>
 
@@ -590,26 +566,23 @@ export const ChooseLoginPage: React.FC<ChooseLoginPageProps> = ({ onLoginSuccess
             </button>
           </form>
 
-          {/* 1-Click Customer Demo Shortcut */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-200"></div>
-            </div>
-            <div className="relative flex justify-center text-[10px] uppercase">
-              <span className="bg-white px-2 text-slate-400 font-bold tracking-wider">
-                Or 1-Click Demo Client
+          {/* Demo Customer Reference block (strictly non-interactive reference for judges/testing) */}
+          <div className="mt-6 pt-5 border-t border-slate-200 text-left">
+            <div className="p-4 bg-emerald-50/60 border border-emerald-200 rounded-2xl">
+              <span className="text-[11px] font-bold text-emerald-900 uppercase tracking-wider block mb-1">
+                Demo customer reference (for judges/testing)
               </span>
+              <p className="text-[11px] text-emerald-700 mb-2">
+                Pre-seeded Gold-tier demo client account:
+              </p>
+              <div className="p-2.5 bg-white rounded-xl border border-emerald-200 select-all font-mono text-xs text-slate-800">
+                deals@apexenterprises.com
+              </div>
+              <p className="text-[10px] text-emerald-600/90 mt-2">
+                Type or paste this email in the form above and click "Authenticate Magic Link" to proceed.
+              </p>
             </div>
           </div>
-
-          <button
-            type="button"
-            onClick={() => handleQuickPersona('PORTAL')}
-            className="w-full p-3 bg-emerald-50 hover:bg-emerald-100/80 text-emerald-800 rounded-xl border border-emerald-200 font-bold text-xs flex items-center justify-center space-x-2 transition cursor-pointer"
-          >
-            <span>Enter as Apex Enterprises (Gold Tier Demo)</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
         </div>
       )}
     </div>
