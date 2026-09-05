@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { portalApi, quotationsApi } from '../services/api';
+import { portalApi, quotationsApi, viewPdfBlob, downloadPdfBlob } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import {
   CheckCircle2,
@@ -15,6 +15,9 @@ import {
   Tag,
   Clock,
   IndianRupee,
+  FileText,
+  Download,
+  Loader2,
 } from 'lucide-react';
 import { StatusBadge } from '../components/StatusBadge';
 
@@ -161,6 +164,34 @@ export const CustomerPortalPage: React.FC<CustomerPortalPageProps> = ({
     }
   };
 
+  const [pdfLoading, setPdfLoading] = useState<'view' | 'download' | null>(null);
+
+  const handlePortalViewPdf = async () => {
+    if (!quotation?.id) return;
+    try {
+      setPdfLoading('view');
+      const blob = await portalApi.getPdf(quotation.id, 'view');
+      viewPdfBlob(blob);
+    } catch (err: any) {
+      alert(err.response?.data?.error?.message || 'Failed to generate quotation PDF');
+    } finally {
+      setPdfLoading(null);
+    }
+  };
+
+  const handlePortalDownloadPdf = async () => {
+    if (!quotation?.id) return;
+    try {
+      setPdfLoading('download');
+      const blob = await portalApi.getPdf(quotation.id, 'download');
+      downloadPdfBlob(blob, `Quotation-${quotation.id.slice(0, 8)}.pdf`);
+    } catch (err: any) {
+      alert(err.response?.data?.error?.message || 'Failed to download quotation PDF');
+    } finally {
+      setPdfLoading(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-20 bg-white rounded-2xl border border-slate-200 shadow-sm">
@@ -222,19 +253,59 @@ export const CustomerPortalPage: React.FC<CustomerPortalPageProps> = ({
         {/* ================= VIEW 1: QUOTATION & TERMS ================= */}
         {activeSubTab === 'quotation' && (
           <div>
-            {/* Title and Description */}
-            <div className="mb-6">
-              <h3 className="text-2xl font-bold text-slate-900">Customer Portal Negotiation Screen</h3>
-              <p className="text-sm text-slate-500 mt-1">
-                Customer reviews and negotiates the quote directly, no email needed.
-              </p>
-            </div>
+            {/* Title, Description & PDF Action Buttons */}
+            <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-100">
+              <div>
+                <h3 className="text-2xl font-bold text-slate-900">Customer Portal Negotiation Screen</h3>
+                <p className="text-sm text-slate-500 mt-1">
+                  Customer reviews and negotiates the quote directly, no email needed.
+                </p>
+                <div className="mt-2.5 flex items-center space-x-2">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-300">
+                    Status: {quotation?.status ? quotation.status.replace(/_/g, ' ') : 'Under Negotiation'}
+                  </span>
+                  {quotation?.id && (
+                    <span className="text-xs font-mono text-slate-400">
+                      ID: #{quotation.id.slice(0, 8)}
+                    </span>
+                  )}
+                </div>
+              </div>
 
-            {/* Status Pill matching reference design */}
-            <div className="mb-6">
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-300">
-                Status: {quotation?.status ? quotation.status.replace(/_/g, ' ') : 'Under Negotiation'}
-              </span>
+              {/* PROMPT C2: PDF View/Download Buttons */}
+              {quotation?.id && (
+                <div className="flex items-center space-x-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={handlePortalViewPdf}
+                    disabled={pdfLoading === 'view'}
+                    className="px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-2xs transition cursor-pointer disabled:opacity-50"
+                    title="View official commercial quotation PDF in new browser tab"
+                  >
+                    {pdfLoading === 'view' ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <FileText className="w-3.5 h-3.5 text-blue-600" />
+                    )}
+                    <span>View Official PDF</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handlePortalDownloadPdf}
+                    disabled={pdfLoading === 'download'}
+                    className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-2xs transition cursor-pointer disabled:opacity-50"
+                    title="Download official PDF copy"
+                  >
+                    {pdfLoading === 'download' ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Download className="w-3.5 h-3.5 text-slate-600" />
+                    )}
+                    <span>Download PDF</span>
+                  </button>
+                </div>
+              )}
             </div>
 
             {successMsg && (

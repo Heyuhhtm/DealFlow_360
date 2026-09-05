@@ -91,6 +91,19 @@ export const quotationsApi = {
     const res = await api.delete(`/quotations/${id}`);
     return res.data;
   },
+  getPdf: async (id: string, mode: 'view' | 'download' = 'view') => {
+    const res = await api.get(`/quotations/${id}/pdf`, {
+      params: { mode },
+      responseType: 'blob',
+    });
+    return res.data as Blob;
+  },
+  sendEmail: async (id: string) => {
+    const res = await api.post<{ success: boolean; previewUrl: string; message: string }>(
+      `/quotations/${id}/send-email`
+    );
+    return res.data;
+  },
 };
 
 // Approvals API
@@ -273,6 +286,35 @@ export const portalApi = {
     const res = await api.post<{ quotationStatus: string }>(`/portal/quotations/${id}/confirm`);
     return res.data;
   },
+  getPdf: async (id: string, mode: 'view' | 'download' = 'view') => {
+    const res = await api.get(`/portal/quotations/${id}/pdf`, {
+      params: { mode },
+      responseType: 'blob',
+    });
+    return res.data as Blob;
+  },
+};
+
+/**
+ * Utility helper to view a PDF Blob in a new browser tab
+ */
+export const viewPdfBlob = (blob: Blob) => {
+  const fileUrl = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
+  window.open(fileUrl, '_blank');
+};
+
+/**
+ * Utility helper to download a PDF Blob with a given filename
+ */
+export const downloadPdfBlob = (blob: Blob, filename: string) => {
+  const fileUrl = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = fileUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(fileUrl), 1000);
 };
 
 // Dashboard API

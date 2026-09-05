@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { calculateLineTotal, calculateOrderTotals, calculateOrderMargin } from '../services/pricing.service';
 import { calculateBlendedRiskScore, determineApprovalRequirements } from '../services/risk.service';
 import { QuotationStatus, ApprovalRole, ApprovalStatus } from '@prisma/client';
+import { generateQuotationPDF } from '../services/pdf.service';
 
 export const portalCommentSchema = z.object({
   lineId: z.string().uuid().optional(),
@@ -467,3 +468,63 @@ export const rejectPortalQuotation = async (req: Request, res: Response): Promis
     quotationStatus: 'REJECTED',
   });
 };
+
+export const getPortalQuotationPdf = async (req: Request, res: Response): Promise<void> => {
+  const id = String(req.params.id);
+  const customerId = req.customer?.customerId;
+  const mode = req.query.mode === 'download' ? 'download' : 'view';
+
+  if (!customerId) {
+    throw new AppError('Portal authentication required', 401);
+  }
+
+  const quotation: any = await prisma.quotation.findUnique({
+    where: { id },
+    include: {
+      customer: true,
+      lines: {
+        include: {
+          product: true,
+        },
+      },
+      warehouseSplits: {
+        include: {
+          warehouse: true,
+        },
+      },
+      subscriptionBillings: true,
+    },
+  });
+
+  if (!quotation) {
+    throw new AppError('Quotation not found', 404);
+  }
+
+  if (quotation.customerId !== customerId) {
+    throw new AppError('Forbidden: Access denied to this quotation', 403);
+  }
+
+  const formattedSplits = (quotation.warehouseSplits || []).map((s: any) => ({
+    warehouseName: s.warehouse?.name || 'Warehouse Depot',
+    quantityFulfilled: s.quantityFulfilled,
+    estimatedShipmentCost: s.estimatedShipmentCost,
+  }));
+
+  const pdfBuffer = await generateQuotationPDF(
+    quotation,
+    quotation.lines,
+    formattedSplits,
+    quotation.subscriptionBillings
+  );
+
+  const refId = quotation.id.slice(0, 8).toUpperCase();
+  res.setHeader('Content-Type', 'application/pdf');
+  if (mode === 'download') {
+    res.setHeader('Content-Disposition', `attachment; filename="Quotation-${refId}.pdf"`);
+  } else {
+    res.setHeader('Content-Disposition', `inline; filename="Quotation-${refId}.pdf"`);
+  }
+  res.setHeader('Content-Length', pdfBuffer.length);
+  res.status(200).send(pdfBuffer);
+};
+

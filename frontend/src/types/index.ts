@@ -104,6 +104,7 @@ export interface Quotation {
   customer: {
     id: string;
     name: string;
+    email?: string;
     tier: CustomerTier;
   };
   rep: {

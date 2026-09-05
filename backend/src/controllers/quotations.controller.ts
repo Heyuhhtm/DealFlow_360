@@ -5,6 +5,8 @@ import { z } from 'zod';
 import { calculateLineTotal, calculateOrderTotals, calculateOrderMargin } from '../services/pricing.service';
 import { calculateBlendedRiskScore, determineApprovalRequirements } from '../services/risk.service';
 import { QuotationStatus, ApprovalRole, ApprovalStatus } from '@prisma/client';
+import { generateQuotationPDF } from '../services/pdf.service';
+import { sendQuotationEmail } from '../services/email.service';
 
 export const quotationLineSchema = z.object({
   productId: z.string().uuid('Invalid product ID'),
@@ -32,6 +34,7 @@ export function formatQuotationDetail(q: any) {
     customer: {
       id: q.customer.id,
       name: q.customer.name,
+      email: q.customer.email,
       tier: q.customer.tier,
     },
     rep: {
@@ -585,3 +588,97 @@ export const deleteQuotation = async (req: Request, res: Response): Promise<void
 
   res.status(200).json({ message: 'Quotation deleted successfully' });
 };
+
+export const getQuotationPdf = async (req: Request, res: Response): Promise<void> => {
+  const id = String(req.params.id);
+  const mode = req.query.mode === 'download' ? 'download' : 'view';
+
+  const quotation: any = await prisma.quotation.findUnique({
+    where: { id },
+    include: detailInclude,
+  });
+
+  if (!quotation) {
+    throw new AppError('Quotation not found', 404);
+  }
+
+  const formattedSplits = (quotation.warehouseSplits || []).map((s: any) => ({
+    warehouseName: s.warehouse?.name || 'Warehouse Depot',
+    quantityFulfilled: s.quantityFulfilled,
+    estimatedShipmentCost: s.estimatedShipmentCost,
+  }));
+
+  const pdfBuffer = await generateQuotationPDF(
+    quotation,
+    quotation.lines,
+    formattedSplits,
+    quotation.subscriptionBillings
+  );
+
+  const refId = quotation.id.slice(0, 8).toUpperCase();
+  res.setHeader('Content-Type', 'application/pdf');
+  if (mode === 'download') {
+    res.setHeader('Content-Disposition', `attachment; filename="Quotation-${refId}.pdf"`);
+  } else {
+    res.setHeader('Content-Disposition', `inline; filename="Quotation-${refId}.pdf"`);
+  }
+  res.setHeader('Content-Length', pdfBuffer.length);
+  res.status(200).send(pdfBuffer);
+};
+
+export const emailQuotationToCustomer = async (req: Request, res: Response): Promise<void> => {
+  const id = String(req.params.id);
+  const userId = req.user?.userId;
+
+  const quotation: any = await prisma.quotation.findUnique({
+    where: { id },
+    include: detailInclude,
+  });
+
+  if (!quotation) {
+    throw new AppError('Quotation not found', 404);
+  }
+
+  if (!quotation.customer?.email) {
+    throw new AppError('Customer email address is not configured', 400);
+  }
+
+  const formattedSplits = (quotation.warehouseSplits || []).map((s: any) => ({
+    warehouseName: s.warehouse?.name || 'Warehouse Depot',
+    quantityFulfilled: s.quantityFulfilled,
+    estimatedShipmentCost: s.estimatedShipmentCost,
+  }));
+
+  const pdfBuffer = await generateQuotationPDF(
+    quotation,
+    quotation.lines,
+    formattedSplits,
+    quotation.subscriptionBillings
+  );
+
+  const emailResult = await sendQuotationEmail(
+    quotation.customer.email,
+    quotation.customer.name,
+    quotation.id,
+    pdfBuffer
+  );
+
+  if (userId) {
+    await prisma.auditLogEntry.create({
+      data: {
+        quotationId: quotation.id,
+        userId,
+        action: 'EMAILED_TO_CUSTOMER',
+        detail: `Sent quotation PDF via email to ${quotation.customer.email}. Message ID: ${emailResult.messageId}`,
+      },
+    });
+  }
+
+  res.status(200).json({
+    success: true,
+    message: `Quotation PDF successfully emailed to ${quotation.customer.email}`,
+    previewUrl: emailResult.previewUrl,
+    messageId: emailResult.messageId,
+  });
+};
+

@@ -6,6 +6,8 @@ import {
   updateQuotation,
   deleteQuotation,
   submitForApproval,
+  getQuotationPdf,
+  emailQuotationToCustomer,
 } from '../controllers/quotations.controller';
 import { getApprovals, takeApprovalAction, getAuditLog } from '../controllers/approvals.controller';
 import { getUpsellSuggestions } from '../controllers/upsell.controller';
@@ -33,6 +35,8 @@ router.get('/:id', asyncHandler(getQuotationById));
 router.patch('/:id', asyncHandler(updateQuotation));
 router.delete('/:id', asyncHandler(deleteQuotation));
 router.post('/:id/submit-for-approval', asyncHandler(submitForApproval));
+router.get('/:id/pdf', asyncHandler(getQuotationPdf));
+router.post('/:id/send-email', asyncHandler(emailQuotationToCustomer));
 
 // Approval & Audit Trail
 router.get('/:id/approvals', asyncHandler(getApprovals));

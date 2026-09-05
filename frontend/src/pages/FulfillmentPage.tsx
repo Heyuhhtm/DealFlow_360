@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { warehousesApi, quotationsApi, fulfillmentApi, productsApi } from '../services/api';
+import { warehousesApi, quotationsApi, fulfillmentApi, productsApi, viewPdfBlob, downloadPdfBlob } from '../services/api';
 import { Warehouse, QuotationListItem, FulfillmentPreview, Product } from '../types';
 import {
   Boxes,
@@ -86,6 +86,34 @@ export const FulfillmentPage: React.FC = () => {
 
   const productMap = new Map(products.map((p) => [p.id, p]));
   const selectedQuotation = quotations.find((q) => q.id === selectedQuotationId);
+
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+
+  const handleViewPdf = async (id: string) => {
+    if (!id) return;
+    try {
+      setDownloadingPdf(true);
+      const blob = await quotationsApi.getPdf(id, 'view');
+      viewPdfBlob(blob);
+    } catch (err: any) {
+      alert(err.response?.data?.error?.message || 'Failed to generate PDF document');
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
+  const handleDownloadPdf = async (id: string) => {
+    if (!id) return;
+    try {
+      setDownloadingPdf(true);
+      const blob = await quotationsApi.getPdf(id, 'download');
+      downloadPdfBlob(blob, `Fulfillment-Manifest-${id.slice(0, 8)}.pdf`);
+    } catch (err: any) {
+      alert(err.response?.data?.error?.message || 'Failed to download PDF document');
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
 
   // -------------------------------------------------------------
   // HANDLERS: Calculate Split
@@ -490,15 +518,30 @@ export const FulfillmentPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* PROMPT B1: NEW "Generate Fulfillment Document" BUTTON */}
-              <button
-                type="button"
-                onClick={() => setShowDocModal(true)}
-                className="px-5 py-2.5 bg-[#0b2b68] hover:bg-blue-900 text-white rounded-xl text-xs font-bold shadow-md transition flex items-center justify-center space-x-2 cursor-pointer shrink-0"
-              >
-                <FileText className="w-4 h-4 text-blue-300" />
-                <span>Generate Fulfillment Document</span>
-              </button>
+              {/* PROMPT B1 & C2: Generate Fulfillment Document & Download PDF BUTTONS */}
+              <div className="flex items-center space-x-2 shrink-0">
+                <button
+                  type="button"
+                  disabled={downloadingPdf}
+                  onClick={() => handleViewPdf(selectedQuotationId)}
+                  className="px-4 py-2.5 bg-[#0b2b68] hover:bg-blue-900 text-white rounded-xl text-xs font-bold shadow-md transition flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50"
+                  title="Generate and view official commercial fulfillment PDF in new tab"
+                >
+                  <FileText className="w-4 h-4 text-blue-300" />
+                  <span>{downloadingPdf ? 'Generating PDF...' : 'Generate Fulfillment Document'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={downloadingPdf}
+                  onClick={() => handleDownloadPdf(selectedQuotationId)}
+                  className="px-3.5 py-2.5 bg-white hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-bold border border-slate-300 shadow-xs transition flex items-center justify-center space-x-1.5 cursor-pointer disabled:opacity-50"
+                  title="Download PDF to computer"
+                >
+                  <Download className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Download PDF</span>
+                </button>
+              </div>
             </div>
 
             {/* Confirmed Split Cards */}

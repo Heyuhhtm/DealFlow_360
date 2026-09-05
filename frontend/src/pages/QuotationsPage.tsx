@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { quotationsApi, productsApi, upsellApi, customersApi } from '../services/api';
+import {
+  quotationsApi,
+  productsApi,
+  upsellApi,
+  customersApi,
+  viewPdfBlob,
+  downloadPdfBlob,
+} from '../services/api';
 import { Quotation, QuotationListItem, Product, CustomerTier, CustomerDirectoryItem } from '../types';
 import { StatusBadge } from '../components/StatusBadge';
 import {
@@ -22,6 +29,10 @@ import {
   Clock,
   TrendingUp,
   Tag,
+  Download,
+  Mail,
+  ExternalLink,
+  Loader2,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -34,10 +45,20 @@ export const QuotationsPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
 
-  // Modals
+  // Modals & Detail
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [selectedQuotation, setSelectedQuotation] = useState<Quotation | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+
+  // PDF & Email State
+  const [pdfLoading, setPdfLoading] = useState<'view' | 'download' | null>(null);
+  const [emailConfirmOpen, setEmailConfirmOpen] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailSuccessResult, setEmailSuccessResult] = useState<{
+    previewUrl: string;
+    message: string;
+  } | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   // Create Form State
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
@@ -106,6 +127,9 @@ export const QuotationsPage: React.FC = () => {
 
   const handleOpenDetail = async (id: string) => {
     setDetailLoading(true);
+    setEmailSuccessResult(null);
+    setEmailError(null);
+    setEmailConfirmOpen(false);
     try {
       const q = await quotationsApi.getById(id);
       setSelectedQuotation(q);
@@ -115,6 +139,50 @@ export const QuotationsPage: React.FC = () => {
       console.error(e);
     } finally {
       setDetailLoading(false);
+    }
+  };
+
+  const handleViewPdf = async (id: string) => {
+    try {
+      setPdfLoading('view');
+      const blob = await quotationsApi.getPdf(id, 'view');
+      viewPdfBlob(blob);
+    } catch (err: any) {
+      alert(err.response?.data?.error?.message || 'Failed to generate quotation PDF');
+    } finally {
+      setPdfLoading(null);
+    }
+  };
+
+  const handleDownloadPdf = async (id: string) => {
+    try {
+      setPdfLoading('download');
+      const blob = await quotationsApi.getPdf(id, 'download');
+      downloadPdfBlob(blob, `Quotation-${id.slice(0, 8)}.pdf`);
+    } catch (err: any) {
+      alert(err.response?.data?.error?.message || 'Failed to download quotation PDF');
+    } finally {
+      setPdfLoading(null);
+    }
+  };
+
+  const handleSendQuotationEmail = async () => {
+    if (!selectedQuotation) return;
+    setSendingEmail(true);
+    setEmailError(null);
+    try {
+      const res = await quotationsApi.sendEmail(selectedQuotation.id);
+      setEmailSuccessResult({
+        previewUrl: res.previewUrl,
+        message: res.message || 'Quotation PDF successfully emailed to customer.',
+      });
+      setEmailConfirmOpen(false);
+      // Refresh quotation detail so the new AuditLogEntry is visible
+      await handleOpenDetail(selectedQuotation.id);
+    } catch (err: any) {
+      setEmailError(err.response?.data?.error?.message || 'Failed to send quotation email');
+    } finally {
+      setSendingEmail(false);
     }
   };
 
@@ -456,15 +524,28 @@ export const QuotationsPage: React.FC = () => {
                     {new Date(quote.lastActivityAt).toLocaleDateString()}
                   </td>
                   <td className="py-4 px-6 text-right">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenDetail(quote.id);
-                      }}
-                      className="p-1.5 hover:bg-slate-100 text-slate-500 hover:text-blue-600 rounded-lg transition"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center justify-end space-x-1.5">
+                      <button
+                        title="View Official PDF"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleViewPdf(quote.id);
+                        }}
+                        className="p-1.5 hover:bg-blue-50 text-slate-400 hover:text-blue-600 rounded-lg transition cursor-pointer"
+                      >
+                        <FileText className="w-4 h-4" />
+                      </button>
+                      <button
+                        title="View Details"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenDetail(quote.id);
+                        }}
+                        className="p-1.5 hover:bg-slate-100 text-slate-500 hover:text-blue-600 rounded-lg transition cursor-pointer"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -970,7 +1051,7 @@ export const QuotationsPage: React.FC = () => {
       {selectedQuotation && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
           <div className="bg-white rounded-2xl max-w-4xl w-full p-8 shadow-2xl border border-slate-200 my-8 space-y-6">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-slate-100 gap-4">
               <div>
                 <div className="flex items-center space-x-3">
                   <h3 className="text-xl font-bold text-slate-900">
@@ -978,12 +1059,107 @@ export const QuotationsPage: React.FC = () => {
                   </h3>
                   <StatusBadge status={selectedQuotation.status} />
                 </div>
-                <p className="text-xs text-slate-500 mt-1 font-mono">ID: {selectedQuotation.id}</p>
+                <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-slate-500">
+                  <span className="font-mono">ID: #{selectedQuotation.id.slice(0, 8)}</span>
+                  {selectedQuotation.customer.email && (
+                    <span className="flex items-center space-x-1 text-slate-600 font-medium">
+                      <Mail className="w-3.5 h-3.5 text-slate-400" />
+                      <span>{selectedQuotation.customer.email}</span>
+                    </span>
+                  )}
+                  <span className="bg-slate-100 px-2 py-0.5 rounded text-[11px] font-semibold text-slate-700">
+                    Tier: {selectedQuotation.customer.tier}
+                  </span>
+                </div>
               </div>
-              <button onClick={() => setSelectedQuotation(null)} className="text-slate-400 hover:text-slate-600 text-lg">
-                ✕
-              </button>
+
+              {/* Action Buttons (Prompt C2 & C4) */}
+              <div className="flex items-center space-x-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => handleViewPdf(selectedQuotation.id)}
+                  disabled={pdfLoading === 'view'}
+                  className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold flex items-center space-x-1.5 shadow-2xs transition cursor-pointer disabled:opacity-50"
+                  title="View official commercial quotation PDF in new browser tab"
+                >
+                  {pdfLoading === 'view' ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <FileText className="w-3.5 h-3.5 text-blue-600" />
+                  )}
+                  <span>View PDF</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleDownloadPdf(selectedQuotation.id)}
+                  disabled={pdfLoading === 'download'}
+                  className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold flex items-center space-x-1.5 shadow-2xs transition cursor-pointer disabled:opacity-50"
+                  title="Download quotation PDF copy"
+                >
+                  {pdfLoading === 'download' ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Download className="w-3.5 h-3.5 text-slate-600" />
+                  )}
+                  <span>Download PDF</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setEmailConfirmOpen(true)}
+                  className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold flex items-center space-x-1.5 shadow-xs transition cursor-pointer"
+                  title="Email quotation PDF to customer"
+                >
+                  <Mail className="w-3.5 h-3.5" />
+                  <span>Email to Customer</span>
+                </button>
+
+                <button
+                  onClick={() => setSelectedQuotation(null)}
+                  className="p-1.5 text-slate-400 hover:text-slate-600 text-lg rounded-lg cursor-pointer"
+                  title="Close modal"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
+
+            {/* Email Success Banner with Ethereal Live Preview Link */}
+            {emailSuccessResult && (
+              <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-emerald-100 text-emerald-800 rounded-lg shrink-0">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                  </div>
+                  <div>
+                    <h5 className="text-xs font-bold text-emerald-950">Email sent!</h5>
+                    <p className="text-xs text-emerald-800 mt-0.5">
+                      {emailSuccessResult.message || `Quotation PDF sent to ${selectedQuotation.customer.email}`}
+                    </p>
+                  </div>
+                </div>
+                {emailSuccessResult.previewUrl && (
+                  <a
+                    href={emailSuccessResult.previewUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center space-x-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition shrink-0 cursor-pointer"
+                  >
+                    <span>View Sent Email</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                )}
+              </div>
+            )}
+
+            {/* Email Error Alert */}
+            {emailError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-center space-x-2 text-xs text-rose-800">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{emailError}</span>
+              </div>
+            )}
 
             {/* Pricing Summary */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
@@ -1106,23 +1282,138 @@ export const QuotationsPage: React.FC = () => {
             </div>
 
             {/* Actions */}
-            <div className="flex justify-between items-center pt-4 border-t border-slate-100">
-              <div>
+            <div className="flex flex-wrap justify-between items-center gap-3 pt-4 border-t border-slate-100">
+              <div className="flex flex-wrap items-center gap-2">
                 {selectedQuotation.status === 'DRAFT' && (
                   <button
                     onClick={() => handleSubmitForApproval(selectedQuotation.id)}
-                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold flex items-center space-x-1.5 shadow-sm"
+                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold flex items-center space-x-1.5 shadow-sm cursor-pointer"
                   >
                     <Send className="w-3.5 h-3.5" />
                     <span>Submit for Approval</span>
                   </button>
                 )}
+
+                <button
+                  type="button"
+                  onClick={() => handleViewPdf(selectedQuotation.id)}
+                  disabled={pdfLoading === 'view'}
+                  className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-bold flex items-center space-x-1.5 transition cursor-pointer disabled:opacity-50"
+                  title="View PDF document"
+                >
+                  {pdfLoading === 'view' ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <FileText className="w-3.5 h-3.5 text-blue-600" />
+                  )}
+                  <span>View PDF</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleDownloadPdf(selectedQuotation.id)}
+                  disabled={pdfLoading === 'download'}
+                  className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-bold flex items-center space-x-1.5 transition cursor-pointer disabled:opacity-50"
+                  title="Download PDF document"
+                >
+                  {pdfLoading === 'download' ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Download className="w-3.5 h-3.5 text-slate-600" />
+                  )}
+                  <span>Download PDF</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setEmailConfirmOpen(true)}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold flex items-center space-x-1.5 shadow-sm transition cursor-pointer"
+                  title="Send official quotation PDF to customer email"
+                >
+                  <Mail className="w-3.5 h-3.5" />
+                  <span>Email to Customer</span>
+                </button>
               </div>
+
               <button
                 onClick={() => setSelectedQuotation(null)}
-                className="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-lg"
+                className="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-lg cursor-pointer"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PROMPT C4: Email to Customer Confirmation Dialog */}
+      {emailConfirmOpen && selectedQuotation && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-60 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+                  <Mail className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-base font-bold text-slate-900">Email to Customer</h4>
+                  <p className="text-xs text-slate-500">Official commercial document dispatch</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setEmailConfirmOpen(false)}
+                className="text-slate-400 hover:text-slate-600 text-sm p-1 rounded-lg cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 text-xs text-slate-700 space-y-2.5">
+              <p className="leading-relaxed">
+                Send this quotation to{' '}
+                <strong className="text-blue-900 font-bold">
+                  {selectedQuotation.customer.email || 'customer email'}
+                </strong>
+                ?
+              </p>
+              <div className="pt-2 border-t border-slate-200/70 flex items-center justify-between text-[11px] text-slate-500">
+                <span>Total Quotation Amount:</span>
+                <span className="font-bold text-slate-900">
+                  ₹{selectedQuotation.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-slate-500">
+                <span>Customer Contact:</span>
+                <span className="font-medium text-slate-700">{selectedQuotation.customer.name}</span>
+              </div>
+            </div>
+
+            <div className="flex justify-end items-center space-x-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setEmailConfirmOpen(false)}
+                disabled={sendingEmail}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSendQuotationEmail}
+                disabled={sendingEmail}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl flex items-center space-x-1.5 shadow-sm transition cursor-pointer disabled:opacity-75"
+              >
+                {sendingEmail ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Sending PDF...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Confirm</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
