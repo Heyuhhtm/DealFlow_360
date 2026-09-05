@@ -1,7 +1,12 @@
 import React from 'react';
 import { ShieldCheck, Headphones, Zap, Users } from 'lucide-react';
+import { NavTab } from './Sidebar';
 
-export const Footer: React.FC = () => {
+interface FooterProps {
+  onNavigate?: (tab: NavTab) => void;
+}
+
+export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
   return (
     <footer className="mt-16 bg-white border-t border-slate-200">
       {/* 4 Feature Badges Section from reference design */}
@@ -13,7 +18,7 @@ export const Footer: React.FC = () => {
               <ShieldCheck className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-slate-900">Secure & Reliable</h4>
+              <h4 className="text-sm font-bold text-slate-900">Secure &amp; Reliable</h4>
               <p className="text-xs text-slate-500 mt-0.5">Your data is safe with us</p>
             </div>
           </div>
@@ -35,7 +40,7 @@ export const Footer: React.FC = () => {
               <Zap className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-slate-900">Fast & Easy</h4>
+              <h4 className="text-sm font-bold text-slate-900">Fast &amp; Easy</h4>
               <p className="text-xs text-slate-500 mt-0.5">Complete in few simple steps</p>
             </div>
           </div>
@@ -56,14 +61,54 @@ export const Footer: React.FC = () => {
       {/* Copyright & Legal Links Bar */}
       <div className="border-t border-slate-100 py-6">
         <div className="max-w-[1600px] mx-auto px-6 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 space-y-4 sm:space-y-0">
-          <p>© 2025 DealFlow360. All rights reserved.</p>
+          <p>&copy; 2025 DealFlow360. All rights reserved.</p>
           <div className="flex items-center space-x-6">
-            <a href="#terms" className="hover:text-slate-800 transition">Terms of Service</a>
-            <a href="#privacy" className="hover:text-slate-800 transition">Privacy Policy</a>
-            <a href="#help" className="hover:text-slate-800 transition">Help Center</a>
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                if (onNavigate) {
+                  onNavigate('terms');
+                } else {
+                  window.history.pushState(null, '', '/terms');
+                  window.dispatchEvent(new PopStateEvent('popstate'));
+                }
+              }}
+              className="hover:text-slate-800 transition cursor-pointer"
+            >
+              Terms of Service
+            </button>
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                if (onNavigate) {
+                  onNavigate('privacy');
+                } else {
+                  window.history.pushState(null, '', '/privacy');
+                  window.dispatchEvent(new PopStateEvent('popstate'));
+                }
+              }}
+              className="hover:text-slate-800 transition cursor-pointer"
+            >
+              Privacy Policy
+            </button>
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                if (onNavigate) {
+                  onNavigate('help');
+                } else {
+                  window.history.pushState(null, '', '/help');
+                  window.dispatchEvent(new PopStateEvent('popstate'));
+                }
+              }}
+              className="hover:text-slate-800 transition cursor-pointer"
+            >
+              Help Center
+            </button>
           </div>
         </div>
       </div>
     </footer>
   );
 };
+

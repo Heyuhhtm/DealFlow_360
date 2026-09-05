@@ -35,7 +35,10 @@ export type NavTab =
   | 'reports'
   | 'products'
   | 'portal'
-  | 'login';
+  | 'login'
+  | 'terms'
+  | 'privacy'
+  | 'help';
 
 interface HeaderProps {
   activeTab: NavTab;

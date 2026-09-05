@@ -18,11 +18,20 @@ import { WarehousesPage } from './pages/WarehousesPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { LoginPage } from './pages/LoginPage';
 import { ChooseLoginPage } from './pages/ChooseLoginPage';
+import { TermsOfServicePage } from './pages/TermsOfServicePage';
+import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
+import { HelpCenterPage } from './pages/HelpCenterPage';
 import { Menu, Hexagon } from 'lucide-react';
 
 const AppContent: React.FC = () => {
   const { user, token, portalToken, activeRole, loading } = useAuth();
-  const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
+  const [activeTab, setActiveTab] = useState<NavTab>(() => {
+    const clean = window.location.pathname.replace(/^\//, '');
+    if (clean === 'terms' || clean === 'privacy' || clean === 'help') {
+      return clean as NavTab;
+    }
+    return 'dashboard';
+  });
   const [portalRoute, setPortalRoute] = useState<PortalRoute>('quotation');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -70,7 +79,13 @@ const AppContent: React.FC = () => {
       } else {
         // Sync URL with activeTab
         const cleanTab = path.replace(/^\//, '') as NavTab;
-        if (cleanTab && cleanTab in ROLE_NAVIGATION_MAP.ADMIN && cleanTab !== activeTab) {
+        const isValidTab =
+          cleanTab &&
+          (cleanTab in ROLE_NAVIGATION_MAP.ADMIN ||
+            cleanTab === 'terms' ||
+            cleanTab === 'privacy' ||
+            cleanTab === 'help');
+        if (isValidTab && cleanTab !== activeTab) {
           setActiveTab(cleanTab);
         }
       }
@@ -97,7 +112,13 @@ const AppContent: React.FC = () => {
           setActiveTab('dashboard');
         } else {
           const tab = path.replace(/^\//, '') as NavTab;
-          if (tab && tab in ROLE_NAVIGATION_MAP.ADMIN) {
+          if (
+            tab &&
+            (tab in ROLE_NAVIGATION_MAP.ADMIN ||
+              tab === 'terms' ||
+              tab === 'privacy' ||
+              tab === 'help')
+          ) {
             setActiveTab(tab);
           }
         }
@@ -112,7 +133,14 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     if (activeRole !== 'PORTAL' && isInternalStaffSession) {
       const allowed = ROLE_NAVIGATION_MAP[activeRole] || ROLE_NAVIGATION_MAP.ADMIN;
-      if (!allowed.includes(activeTab) && activeTab !== 'portal' && activeTab !== 'login') {
+      if (
+        !allowed.includes(activeTab) &&
+        activeTab !== 'portal' &&
+        activeTab !== 'login' &&
+        activeTab !== 'terms' &&
+        activeTab !== 'privacy' &&
+        activeTab !== 'help'
+      ) {
         setActiveTab('dashboard');
       }
     }
@@ -130,7 +158,77 @@ const AppContent: React.FC = () => {
   }
 
   // If user is not logged in (neither internal user nor customer portal), display the Choose Login & Workspace Choice page
+  // or allow direct public access to legal/help documentation
   if (!user && !portalToken) {
+    if (activeTab === 'terms' || activeTab === 'privacy' || activeTab === 'help') {
+      return (
+        <div className="min-h-screen flex flex-col justify-between bg-slate-50">
+          <header className="bg-white border-b border-slate-200 px-6 py-4 shadow-2xs">
+            <div className="max-w-4xl mx-auto flex items-center justify-between">
+              <div
+                onClick={() => {
+                  setActiveTab('dashboard');
+                  window.history.pushState(null, '', '/');
+                }}
+                className="flex items-center space-x-2.5 cursor-pointer"
+              >
+                <div className="relative flex items-center justify-center">
+                  <Hexagon className="w-8 h-8 text-blue-600 stroke-[2.5]" />
+                  <div className="absolute w-2.5 h-2.5 bg-blue-900 rounded-full"></div>
+                </div>
+                <span className="font-bold text-lg tracking-tight text-slate-900">
+                  DealFlow<span className="text-blue-600">360</span>
+                </span>
+              </div>
+              <button
+                onClick={() => {
+                  setActiveTab('dashboard');
+                  window.history.pushState(null, '', '/');
+                }}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition cursor-pointer shadow-xs"
+              >
+                Sign In to Platform
+              </button>
+            </div>
+          </header>
+
+          <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-8">
+            {activeTab === 'terms' && (
+              <TermsOfServicePage
+                onBack={() => {
+                  setActiveTab('dashboard');
+                  window.history.pushState(null, '', '/');
+                }}
+              />
+            )}
+            {activeTab === 'privacy' && (
+              <PrivacyPolicyPage
+                onBack={() => {
+                  setActiveTab('dashboard');
+                  window.history.pushState(null, '', '/');
+                }}
+              />
+            )}
+            {activeTab === 'help' && (
+              <HelpCenterPage
+                onBack={() => {
+                  setActiveTab('dashboard');
+                  window.history.pushState(null, '', '/');
+                }}
+              />
+            )}
+          </main>
+
+          <Footer
+            onNavigate={(tab) => {
+              setActiveTab(tab);
+              window.history.pushState(null, '', `/${tab}`);
+            }}
+          />
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen flex flex-col justify-between bg-slate-100">
         <div className="flex-1 flex items-center justify-center py-8">
@@ -148,7 +246,12 @@ const AppContent: React.FC = () => {
             }}
           />
         </div>
-        <Footer />
+        <Footer
+          onNavigate={(tab) => {
+            setActiveTab(tab);
+            window.history.pushState(null, '', `/${tab}`);
+          }}
+        />
       </div>
     );
   }
@@ -157,6 +260,46 @@ const AppContent: React.FC = () => {
   // Triggered ONLY if the user is authenticated via customer portal magic-link token.
   // Self-contained visual and navigational shell, entirely separate from Sidebar.
   if (isPortalCustomerSession) {
+    if (activeTab === 'terms' || activeTab === 'privacy' || activeTab === 'help') {
+      return (
+        <PortalLayout
+          currentRoute={portalRoute}
+          onRouteChange={(route) => {
+            setPortalRoute(route);
+            window.history.pushState(null, '', `/portal/${route}`);
+          }}
+          isPreview={false}
+        >
+          <div className="py-4">
+            {activeTab === 'terms' && (
+              <TermsOfServicePage
+                onBack={() => {
+                  setActiveTab('portal');
+                  window.history.pushState(null, '', '/portal/quotation');
+                }}
+              />
+            )}
+            {activeTab === 'privacy' && (
+              <PrivacyPolicyPage
+                onBack={() => {
+                  setActiveTab('portal');
+                  window.history.pushState(null, '', '/portal/quotation');
+                }}
+              />
+            )}
+            {activeTab === 'help' && (
+              <HelpCenterPage
+                onBack={() => {
+                  setActiveTab('portal');
+                  window.history.pushState(null, '', '/portal/quotation');
+                }}
+              />
+            )}
+          </div>
+        </PortalLayout>
+      );
+    }
+
     return (
       <PortalLayout
         currentRoute={portalRoute}
@@ -338,10 +481,30 @@ const AppContent: React.FC = () => {
               <ProductsPage />
             </RoleGuard>
           )}
+
+          {activeTab === 'terms' && (
+            <TermsOfServicePage onBack={() => setActiveTab('dashboard')} />
+          )}
+
+          {activeTab === 'privacy' && (
+            <PrivacyPolicyPage onBack={() => setActiveTab('dashboard')} />
+          )}
+
+          {activeTab === 'help' && (
+            <HelpCenterPage
+              onBack={() => setActiveTab('dashboard')}
+              onNavigateTab={(tab) => setActiveTab(tab as NavTab)}
+            />
+          )}
         </main>
 
         {/* Footer shifted along with content */}
-        <Footer />
+        <Footer
+          onNavigate={(tab) => {
+            setActiveTab(tab);
+            window.history.pushState(null, '', `/${tab}`);
+          }}
+        />
       </div>
     </div>
   );

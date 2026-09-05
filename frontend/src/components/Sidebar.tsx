@@ -36,7 +36,10 @@ export type NavTab =
   | 'reports'
   | 'products'
   | 'portal'
-  | 'login';
+  | 'login'
+  | 'terms'
+  | 'privacy'
+  | 'help';
 
 /**
  * Role-Based Navigation Visibility Map
