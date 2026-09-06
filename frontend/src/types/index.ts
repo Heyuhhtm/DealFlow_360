@@ -42,6 +42,11 @@ export interface Product {
   marginPercent: number;
   discountCeiling: number;
   billingCycle?: BillingCycle | null;
+  totalStock?: number;
+  warehouseStock?: Array<{
+    quantity: number;
+    warehouse: { id: string; name: string };
+  }>;
 }
 
 export interface QuotationLine {

@@ -22,6 +22,7 @@ export const loginSchema = z.object({
 
 export const portalMagicLinkSchema = z.object({
   email: z.string().email('Invalid email address'),
+  password: z.string().optional(),
 });
 
 export const signup = async (req: Request, res: Response): Promise<void> => {

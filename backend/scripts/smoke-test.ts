@@ -52,9 +52,11 @@ async function runSmokeTest() {
     // Get sample quotation or customer
     const quotationsList = await axios.get<any>(`${BASE_URL}/quotations`, repAuthHeader);
     let customerId = '';
+    let customerEmail = '';
     if (quotationsList.data.length > 0) {
       const sampleQ = await axios.get<any>(`${BASE_URL}/quotations/${quotationsList.data[0].id}`, repAuthHeader);
       customerId = sampleQ.data.customer.id;
+      customerEmail = sampleQ.data.customer.email;
     }
 
     // Step 2: Create a new quotation with a discount above ceiling
@@ -184,9 +186,9 @@ async function runSmokeTest() {
 
     // Step 9: Portal magic link, fetch, and counter-discount
     try {
-      // Generate magic link
+      // Generate magic link for the quotation's actual customer
       const magicRes = await axios.post<any>(`${BASE_URL}/auth/portal-magic-link`, {
-        email: 'deals@apexenterprises.com',
+        email: customerEmail || createdQuotation?.customer?.email || 'deals@apexenterprises.com',
       });
       const portalToken = magicRes.data.magicLinkToken;
       const portalAuth = { headers: { Authorization: `Bearer ${portalToken}` } };

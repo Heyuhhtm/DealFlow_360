@@ -18,7 +18,6 @@ import { DealHealthPage } from './pages/DealHealthPage';
 import { CustomersPage } from './pages/CustomersPage';
 import { WarehousesPage } from './pages/WarehousesPage';
 import { ReportsPage } from './pages/ReportsPage';
-import { LoginPage } from './pages/LoginPage';
 import { ChooseLoginPage } from './pages/ChooseLoginPage';
 import { TermsOfServicePage } from './pages/TermsOfServicePage';
 import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { productsApi } from '../services/api';
 import { Product, ProductCategory } from '../types';
-import { Package, Search, Filter, Percent, IndianRupee, Layers, Plus, X, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { Package, Search, Filter, Percent, IndianRupee, Layers, Plus, X, CheckCircle2, ShieldAlert, RefreshCw } from 'lucide-react';
+import { getSocket } from '../lib/socket';
 
 export const ProductsPage: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -35,6 +36,18 @@ export const ProductsPage: React.FC = () => {
 
   useEffect(() => {
     fetchProducts();
+  }, [selectedCategory]);
+
+  useEffect(() => {
+    const socket = getSocket();
+    const handleStockUpdated = () => {
+      fetchProducts();
+    };
+
+    socket.on('stock-updated', handleStockUpdated);
+    return () => {
+      socket.off('stock-updated', handleStockUpdated);
+    };
   }, [selectedCategory]);
 
   const handleCategoryChange = (cat: ProductCategory) => {
@@ -90,17 +103,29 @@ export const ProductsPage: React.FC = () => {
         <div>
           <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Product Catalog & Pricing Rules</h2>
           <p className="text-sm text-slate-500 mt-1">
-            Global catalog with predefined margin targets, category discount ceilings, and billing cadence rules.
+            Global catalog with predefined margin targets, category discount ceilings, and live warehouse inventory.
           </p>
         </div>
 
-        <button
-          onClick={() => setCreateModalOpen(true)}
-          className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-xl flex items-center space-x-2 shadow-sm transition shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add New Product</span>
-        </button>
+        <div className="flex items-center space-x-3 shrink-0">
+          <button
+            onClick={fetchProducts}
+            disabled={loading}
+            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm rounded-xl flex items-center space-x-2 border border-slate-200 transition"
+            title="Refresh product stock"
+          >
+            <RefreshCw className={`w-4 h-4 text-slate-500 ${loading ? 'animate-spin' : ''}`} />
+            <span>Refresh</span>
+          </button>
+
+          <button
+            onClick={() => setCreateModalOpen(true)}
+            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-xl flex items-center space-x-2 shadow-sm transition shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add New Product</span>
+          </button>
+        </div>
       </div>
 
       {statusMessage && (
@@ -168,14 +193,69 @@ export const ProductsPage: React.FC = () => {
               <p className="text-2xl font-black text-slate-900 mb-4">₹{p.unitPrice.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-100 text-xs">
-              <div className="bg-slate-50 p-2 rounded-lg border border-slate-200">
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">Standard Margin</span>
-                <span className="font-bold text-slate-800">{p.marginPercent}%</span>
+            <div>
+              <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-100 text-xs">
+                <div className="bg-slate-50 p-2 rounded-lg border border-slate-200">
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Standard Margin</span>
+                  <span className="font-bold text-slate-800">{p.marginPercent}%</span>
+                </div>
+                <div className="bg-amber-50 p-2 rounded-lg border border-amber-200">
+                  <span className="text-amber-800 block text-[10px] uppercase font-bold">Discount Ceiling</span>
+                  <span className="font-bold text-amber-900">Max {p.discountCeiling}%</span>
+                </div>
               </div>
-              <div className="bg-amber-50 p-2 rounded-lg border border-amber-200">
-                <span className="text-amber-800 block text-[10px] uppercase font-bold">Discount Ceiling</span>
-                <span className="font-bold text-amber-900">Max {p.discountCeiling}%</span>
+
+              {/* Live Inventory Status */}
+              <div className="mt-4 pt-3 border-t border-slate-100">
+                <div className="flex items-center justify-between text-xs mb-1.5">
+                  <span className="text-slate-500 font-medium flex items-center gap-1.5">
+                    <Package className="w-3.5 h-3.5 text-slate-400" />
+                    Depot Stock:
+                  </span>
+                  {p.category === 'HARDWARE' ? (
+                    typeof p.totalStock === 'number' ? (
+                      p.totalStock > 10 ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                          {p.totalStock} units available
+                        </span>
+                      ) : p.totalStock > 0 ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                          Low Stock: {p.totalStock} units
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                          <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                          Out of Stock (0 units)
+                        </span>
+                      )
+                    ) : (
+                      <span className="text-slate-400 text-xs">Tracking live...</span>
+                    )
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                      ⚡ Instant Provisioning
+                    </span>
+                  )}
+                </div>
+
+                {/* Depot Breakdown for Hardware */}
+                {p.category === 'HARDWARE' && p.warehouseStock && p.warehouseStock.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {p.warehouseStock.map((ws, idx) => (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center gap-1 text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded border border-slate-200"
+                      >
+                        <span className="font-semibold text-slate-700">{ws.warehouse.name}:</span>
+                        <span className={ws.quantity > 0 ? 'text-slate-900 font-bold' : 'text-rose-600 font-bold'}>
+                          {ws.quantity}
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>

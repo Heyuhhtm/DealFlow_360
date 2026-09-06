@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { AppError } from '../lib/errors';
-import { ProductCategory } from '@prisma/client';
+import { ProductCategory, BillingCycle } from '@prisma/client';
+import { z } from 'zod';
 
 export const getProducts = async (req: Request, res: Response): Promise<void> => {
   const category = req.query.category as string | undefined;
@@ -16,22 +17,38 @@ export const getProducts = async (req: Request, res: Response): Promise<void> =>
 
   const products = await prisma.product.findMany({
     where: whereClause,
-    select: {
-      id: true,
-      name: true,
-      category: true,
-      unitPrice: true,
-      marginPercent: true,
-      discountCeiling: true,
-      billingCycle: true,
-      createdAt: true,
+    include: {
+      warehouseStock: {
+        select: {
+          quantity: true,
+          warehouse: {
+            select: { id: true, name: true },
+          },
+        },
+      },
     },
     orderBy: {
       name: 'asc',
     },
   });
 
-  res.status(200).json(products);
+  const enriched = products.map((p) => {
+    const totalStock = p.warehouseStock ? p.warehouseStock.reduce((acc, s) => acc + s.quantity, 0) : 0;
+    return {
+      id: p.id,
+      name: p.name,
+      category: p.category,
+      unitPrice: p.unitPrice,
+      marginPercent: p.marginPercent,
+      discountCeiling: p.discountCeiling,
+      billingCycle: p.billingCycle,
+      createdAt: p.createdAt,
+      totalStock,
+      warehouseStock: p.warehouseStock,
+    };
+  });
+
+  res.status(200).json(enriched);
 };
 
 export const getProductById = async (req: Request, res: Response): Promise<void> => {
@@ -39,15 +56,15 @@ export const getProductById = async (req: Request, res: Response): Promise<void>
 
   const product = await prisma.product.findUnique({
     where: { id },
-    select: {
-      id: true,
-      name: true,
-      category: true,
-      unitPrice: true,
-      marginPercent: true,
-      discountCeiling: true,
-      billingCycle: true,
-      createdAt: true,
+    include: {
+      warehouseStock: {
+        select: {
+          quantity: true,
+          warehouse: {
+            select: { id: true, name: true },
+          },
+        },
+      },
     },
   });
 
@@ -55,11 +72,21 @@ export const getProductById = async (req: Request, res: Response): Promise<void>
     throw new AppError('Product not found', 404);
   }
 
-  res.status(200).json(product);
-};
+  const totalStock = product.warehouseStock ? product.warehouseStock.reduce((acc, s) => acc + s.quantity, 0) : 0;
 
-import { z } from 'zod';
-import { BillingCycle } from '@prisma/client';
+  res.status(200).json({
+    id: product.id,
+    name: product.name,
+    category: product.category,
+    unitPrice: product.unitPrice,
+    marginPercent: product.marginPercent,
+    discountCeiling: product.discountCeiling,
+    billingCycle: product.billingCycle,
+    createdAt: product.createdAt,
+    totalStock,
+    warehouseStock: product.warehouseStock,
+  });
+};
 
 export const createProductSchema = z.object({
   name: z.string().min(1, 'Product name is required'),
@@ -86,10 +113,12 @@ export const createProduct = async (req: Request, res: Response): Promise<void> 
   });
 
   // If HARDWARE, automatically allocate warehouse stock across depots
+  let totalStock = 0;
+  let warehouseStock: any[] = [];
   if (data.category === 'HARDWARE') {
     const warehouses = await prisma.warehouse.findMany();
     if (warehouses.length > 0) {
-      await Promise.all(
+      const createdStocks = await Promise.all(
         warehouses.map((wh) =>
           prisma.warehouseStock.create({
             data: {
@@ -97,13 +126,18 @@ export const createProduct = async (req: Request, res: Response): Promise<void> 
               productId: product.id,
               quantity: data.initialStock || 50,
             },
-          }).catch(() => {})
+            include: {
+              warehouse: { select: { id: true, name: true } },
+            },
+          }).catch(() => null)
         )
       );
+      warehouseStock = createdStocks.filter(Boolean);
+      totalStock = warehouseStock.reduce((acc, s) => acc + (s?.quantity || 0), 0);
     }
   }
 
-  res.status(201).json(product);
+  res.status(201).json({ ...product, totalStock, warehouseStock });
 };
 
 export const updateProduct = async (_req: Request, res: Response): Promise<void> => {

@@ -14,7 +14,7 @@ interface AuthContextType {
   signup: (data: { name: string; email: string; password: string; role: UserRole }) => Promise<void>;
   logout: () => void;
   switchAccount: () => void;
-  requestPortalAccess: (email: string) => Promise<string>;
+  requestPortalAccess: (email: string, password?: string) => Promise<string>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,10 +26,42 @@ export const DEMO_CREDENTIALS = [
   { role: 'Admin', name: 'David Wallace', email: 'david@dealflow360.com', password: 'password123', badgeColor: 'bg-purple-100 text-purple-800' },
 ];
 
-export const DEMO_PORTAL_CUSTOMER = {
-  name: 'Apex Enterprises (Gold Tier)',
-  email: 'deals@apexenterprises.com',
-};
+export const DEMO_PORTAL_CUSTOMERS = [
+  {
+    name: 'Apex Enterprises',
+    tier: 'Gold Tier',
+    tierBadge: 'bg-amber-100 text-amber-800 border-amber-300',
+    email: 'deals@apexenterprises.com',
+    password: 'password123',
+    description: 'Tier-1 enterprise client with custom hardware & service agreements.',
+  },
+  {
+    name: 'Wayne Technologies',
+    tier: 'Silver Tier',
+    tierBadge: 'bg-slate-200 text-slate-800 border-slate-300',
+    email: 'procurement@waynetech.com',
+    password: 'password123',
+    description: 'High-volume tech account with approved procurement quotations.',
+  },
+  {
+    name: 'Stark Logistics',
+    tier: 'Bronze Tier',
+    tierBadge: 'bg-orange-100 text-orange-800 border-orange-300',
+    email: 'contact@starklogistics.io',
+    password: 'password123',
+    description: 'Global supply partner with live negotiations & monitor contracts.',
+  },
+  {
+    name: 'Academic',
+    tier: 'Bronze Tier',
+    tierBadge: 'bg-sky-100 text-sky-800 border-sky-300',
+    email: 'academiccom@123.in',
+    password: 'password123',
+    description: 'Education campus procurement for laptops & computing bundles.',
+  },
+];
+
+export const DEMO_PORTAL_CUSTOMER = DEMO_PORTAL_CUSTOMERS[0];
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -88,8 +120,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('dealflow360_token', res.token);
   };
 
-  const requestPortalAccess = async (email: string) => {
-    const res = await authApi.portalMagicLink(email);
+  const requestPortalAccess = async (email: string, password?: string) => {
+    const res = await authApi.portalMagicLink(email, password);
     setPortalToken(res.magicLinkToken);
     setPortalCustomerEmail(email);
     localStorage.setItem('dealflow360_portal_token', res.magicLinkToken);

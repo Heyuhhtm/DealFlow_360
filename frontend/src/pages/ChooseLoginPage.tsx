@@ -13,8 +13,9 @@ import {
   ArrowLeft,
   CheckCircle2,
   Send,
+  Building2,
 } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, DEMO_PORTAL_CUSTOMERS } from '../context/AuthContext';
 import { UserRole } from '../types';
 
 interface ChooseLoginPageProps {
@@ -38,8 +39,10 @@ export const ChooseLoginPage: React.FC<ChooseLoginPageProps> = ({ onLoginSuccess
   const [signUpPassword, setSignUpPassword] = useState('');
   const [signUpRole, setSignUpRole] = useState<UserRole>('SALES_REP');
 
-  // Customer portal magic link fields
-  const [portalEmail, setPortalEmail] = useState('deals@apexenterprises.com');
+  // Customer portal fields
+  const [portalEmail, setPortalEmail] = useState(DEMO_PORTAL_CUSTOMERS[0].email);
+  const [portalPassword, setPortalPassword] = useState(DEMO_PORTAL_CUSTOMERS[0].password);
+  const [selectedCustomerName, setSelectedCustomerName] = useState(DEMO_PORTAL_CUSTOMERS[0].name);
   const [portalSent, setPortalSent] = useState(false);
 
   const [loading, setLoading] = useState(false);
@@ -94,20 +97,33 @@ export const ChooseLoginPage: React.FC<ChooseLoginPageProps> = ({ onLoginSuccess
     }
   };
 
-  const handlePortalRequest = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handlePortalRequest = async (e?: React.FormEvent, customEmail?: string, customPassword?: string) => {
+    if (e) e.preventDefault();
     setErrorMessage('');
+    setSuccessMessage('');
     setLoading(true);
+    const targetEmail = (customEmail || portalEmail).trim();
+    const targetPassword = customPassword || portalPassword;
     try {
-      await requestPortalAccess(portalEmail.trim());
+      await requestPortalAccess(targetEmail, targetPassword);
       setPortalSent(true);
       setTimeout(() => {
         onLoginSuccess();
       }, 700);
     } catch (err: any) {
-      setErrorMessage(err.response?.data?.error?.message || 'Failed to request portal magic link.');
+      setErrorMessage(err.response?.data?.error?.message || 'Failed to request portal access.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSelectCustomer = (customer: typeof DEMO_PORTAL_CUSTOMERS[0], autoSubmit = false) => {
+    setPortalEmail(customer.email);
+    setPortalPassword(customer.password);
+    setSelectedCustomerName(customer.name);
+    setErrorMessage('');
+    if (autoSubmit) {
+      handlePortalRequest(undefined, customer.email, customer.password);
     }
   };
 
@@ -504,83 +520,219 @@ export const ChooseLoginPage: React.FC<ChooseLoginPageProps> = ({ onLoginSuccess
 
       {/* ================= STAGE 2B: CUSTOMER PORTAL LOGIN FLOW ================= */}
       {selectedFlow === 'portal' && (
-        <div className="max-w-md w-full bg-white rounded-3xl border border-slate-200 shadow-2xl p-8 sm:p-10 text-center animate-in fade-in duration-200">
-          <button
-            onClick={() => {
-              setSelectedFlow(null);
-              setErrorMessage('');
-            }}
-            className="inline-flex items-center space-x-1 text-xs text-slate-500 hover:text-slate-800 mb-6 transition cursor-pointer"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back to Choose Workspace</span>
-          </button>
+        <div className="max-w-4xl w-full grid grid-cols-1 md:grid-cols-12 bg-white rounded-3xl border border-slate-200 shadow-2xl overflow-hidden animate-in fade-in duration-200">
+          {/* Left Hero Sidebar */}
+          <div className="md:col-span-5 bg-gradient-to-br from-[#064e3b] to-emerald-950 p-8 text-white flex flex-col justify-between">
+            <div>
+              <button
+                onClick={() => {
+                  setSelectedFlow(null);
+                  setErrorMessage('');
+                  setSuccessMessage('');
+                }}
+                className="inline-flex items-center space-x-1 text-xs text-emerald-200 hover:text-white mb-6 transition cursor-pointer"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back to Choose Workspace</span>
+              </button>
 
-          <div className="w-14 h-14 rounded-2xl bg-emerald-600 text-white flex items-center justify-center mx-auto mb-4 shadow-md shadow-emerald-500/20">
-            <Globe className="w-7 h-7 stroke-[2.2]" />
+              <div className="flex items-center space-x-3">
+                <div className="relative flex items-center justify-center">
+                  <Globe className="w-8 h-8 text-emerald-400 stroke-[2.5]" />
+                  <div className="absolute w-2.5 h-2.5 bg-white rounded-full"></div>
+                </div>
+                <span className="text-xl font-bold tracking-tight text-white">
+                  Customer <span className="text-emerald-300">Deal Room</span>
+                </span>
+              </div>
+
+              <p className="text-emerald-200 text-xs mt-3 leading-relaxed">
+                Dedicated client portal to view negotiated quotes, counter-propose discounts, and accept formal proposals.
+              </p>
+            </div>
+
+            <div className="my-6 space-y-2.5 text-xs text-emerald-100/90">
+              <div className="p-3 bg-emerald-900/40 rounded-xl border border-emerald-700/40">
+                <span className="font-bold text-white block flex items-center space-x-1.5">
+                  <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Scoped Client Data Isolation</span>
+                </span>
+                <span className="text-[11px] text-emerald-200/80 mt-1 block">
+                  Customers only access their own active deals, contract lines, and assigned account reps.
+                </span>
+              </div>
+              <div className="p-3 bg-emerald-900/40 rounded-xl border border-emerald-700/40">
+                <span className="font-bold text-white block flex items-center space-x-1.5">
+                  <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Tier-Based Auto Limits</span>
+                </span>
+                <span className="text-[11px] text-emerald-200/80 mt-1 block">
+                  Gold, Silver, and Bronze tiers enforce custom governance ceilings during live negotiations.
+                </span>
+              </div>
+            </div>
+
+            <div className="text-[11px] text-emerald-300/70 flex items-center space-x-1.5">
+              <Lock className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span>Protected by 256-bit Customer JWT &bull; Realtime Socket.io</span>
+            </div>
           </div>
 
-          <h2 className="text-xl font-bold text-slate-900">Customer Deal Room Access</h2>
-          <p className="text-xs text-slate-500 mt-1 mb-6">
-            Enter your authorized business email to access your quotation &amp; negotiation room.
-          </p>
-
-          {errorMessage && (
-            <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl font-medium">
-              {errorMessage}
-            </div>
-          )}
-
-          {portalSent && (
-            <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs rounded-xl font-medium flex items-center justify-center space-x-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <span>Magic link authorized! Launching Deal Room...</span>
-            </div>
-          )}
-
-          <form onSubmit={handlePortalRequest} className="space-y-4 text-left">
+          {/* Right Login Form & Customer Directory */}
+          <div className="md:col-span-7 p-8 sm:p-10 flex flex-col justify-between">
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                Authorized Customer Email
-              </label>
-              <div className="relative">
-                <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="email"
-                  required
-                  placeholder="deals@apexenterprises.com"
-                  value={portalEmail}
-                  onChange={(e) => setPortalEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 text-slate-900"
-                />
+              <div className="mb-6">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2.5 py-1 rounded-full uppercase tracking-wider border border-emerald-200">
+                    Client Portal Access
+                  </span>
+                  <span className="text-[10px] font-mono text-slate-500">
+                    Selected: <span className="font-bold text-slate-800">{selectedCustomerName}</span>
+                  </span>
+                </div>
+                <h2 className="text-xl font-bold text-slate-900 mt-2">Sign In to Customer Deal Room</h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  Enter your company email and password or click any pre-configured client below.
+                </p>
+              </div>
+
+              {errorMessage && (
+                <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl font-medium">
+                  {errorMessage}
+                </div>
+              )}
+
+              {portalSent && (
+                <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs rounded-xl font-medium flex items-center justify-center space-x-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span>Authenticated successfully! Opening {selectedCustomerName} Deal Room...</span>
+                </div>
+              )}
+
+              <form onSubmit={handlePortalRequest} className="space-y-3.5 text-left">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Authorized Customer Email
+                  </label>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="email"
+                      required
+                      placeholder="e.g. deals@apexenterprises.com"
+                      value={portalEmail}
+                      onChange={(e) => {
+                        setPortalEmail(e.target.value);
+                        const match = DEMO_PORTAL_CUSTOMERS.find(
+                          (c) => c.email.toLowerCase() === e.target.value.toLowerCase().trim()
+                        );
+                        if (match) setSelectedCustomerName(match.name);
+                      }}
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 text-slate-900"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Password / Portal Passcode
+                  </label>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="password"
+                      required
+                      placeholder="••••••••"
+                      value={portalPassword}
+                      onChange={(e) => setPortalPassword(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 text-slate-900"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading || portalSent}
+                  className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-md transition flex items-center justify-center space-x-2 disabled:opacity-50 cursor-pointer mt-1"
+                >
+                  <span>{loading ? 'Authenticating...' : `Enter ${selectedCustomerName} Deal Room`}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </form>
+
+              {/* Demo Customer Reference Cards (Click to quick-fill or launch) */}
+              <div className="mt-5 pt-4 border-t border-slate-200 text-left">
+                <div className="p-3.5 bg-emerald-50/50 border border-emerald-200/80 rounded-2xl">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[11px] font-bold text-emerald-900 uppercase tracking-wider">
+                      Demo Client Personas (Click to Quick-Fill)
+                    </span>
+                    <span className="text-[10px] bg-emerald-200/80 text-emerald-800 font-mono font-semibold px-2 py-0.5 rounded-full">
+                      Password: password123
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-emerald-700 mb-2.5">
+                    Select any company below to test customer-side quotations, tier discounts, and deal room negotiation:
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    {DEMO_PORTAL_CUSTOMERS.map((customer) => {
+                      const isSelected = portalEmail.toLowerCase() === customer.email.toLowerCase();
+                      return (
+                        <div
+                          key={customer.email}
+                          onClick={() => handleSelectCustomer(customer, false)}
+                          className={`p-2.5 rounded-xl border transition cursor-pointer select-none flex flex-col justify-between ${
+                            isSelected
+                              ? 'bg-emerald-100/70 border-emerald-500 ring-2 ring-emerald-500/20 shadow-xs'
+                              : 'bg-white border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/30'
+                          }`}
+                        >
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="font-bold text-slate-900 text-[11px]">
+                                {customer.name}
+                              </span>
+                              <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full border ${customer.tierBadge}`}>
+                                {customer.tier}
+                              </span>
+                            </div>
+                            <span className="font-mono text-[10px] text-slate-600 block truncate">
+                              {customer.email}
+                            </span>
+                            <span className="text-[10px] text-slate-400 line-clamp-1 mt-0.5">
+                              {customer.description}
+                            </span>
+                          </div>
+
+                          <div className="mt-2 pt-1.5 border-t border-slate-100 flex items-center justify-between">
+                            <span className="text-[10px] text-slate-400 font-mono">pwd: password123</span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSelectCustomer(customer, true);
+                              }}
+                              className="text-[10px] font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-md transition cursor-pointer"
+                            >
+                              Launch →
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={loading || portalSent}
-              className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-md transition flex items-center justify-center space-x-2 disabled:opacity-50 cursor-pointer"
-            >
-              <span>{loading ? 'Validating...' : 'Authenticate Magic Link'}</span>
-              <Send className="w-4 h-4" />
-            </button>
-          </form>
-
-          {/* Demo Customer Reference block (strictly non-interactive reference for judges/testing) */}
-          <div className="mt-6 pt-5 border-t border-slate-200 text-left">
-            <div className="p-4 bg-emerald-50/60 border border-emerald-200 rounded-2xl">
-              <span className="text-[11px] font-bold text-emerald-900 uppercase tracking-wider block mb-1">
-                Demo customer reference (for judges/testing)
-              </span>
-              <p className="text-[11px] text-emerald-700 mb-2">
-                Pre-seeded Gold-tier demo client account:
-              </p>
-              <div className="p-2.5 bg-white rounded-xl border border-emerald-200 select-all font-mono text-xs text-slate-800">
-                deals@apexenterprises.com
-              </div>
-              <p className="text-[10px] text-emerald-600/90 mt-2">
-                Type or paste this email in the form above and click "Authenticate Magic Link" to proceed.
-              </p>
+            <div className="pt-4 text-center">
+              <button
+                onClick={() => setSelectedFlow(null)}
+                className="text-xs text-slate-500 hover:text-slate-800 font-medium underline cursor-pointer"
+              >
+                ← Return to Login Choices
+              </button>
             </div>
           </div>
         </div>

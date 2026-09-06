@@ -3,6 +3,7 @@ import prisma from '../lib/prisma';
 import { AppError } from '../lib/errors';
 import { calculateWarehouseSplit } from '../services/fulfillment.service';
 import { z } from 'zod';
+import { getIO } from '../lib/socket';
 
 export const confirmFulfillmentSchema = z.object({
   useCalculated: z.boolean().optional(),
@@ -260,6 +261,15 @@ export const confirmFulfillment = async (req: Request, res: Response): Promise<v
       data: { lastActivityAt: new Date() },
     });
   });
+
+  const io = getIO();
+  if (io) {
+    io.emit('stock-updated', {
+      quotationId: id,
+      splits: splitsToPersist,
+      timestamp: new Date(),
+    });
+  }
 
   res.status(200).json(splitsToPersist);
 };

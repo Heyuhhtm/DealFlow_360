@@ -34,6 +34,7 @@ export const CustomerPortalPage: React.FC<CustomerPortalPageProps> = ({
 }) => {
   const { portalToken, portalCustomerEmail, requestPortalAccess, switchAccount } = useAuth();
   const [quotation, setQuotation] = useState<any>(null);
+  const [quotationsList, setQuotationsList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,6 +64,22 @@ export const CustomerPortalPage: React.FC<CustomerPortalPageProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  const handleSelectQuotation = async (id: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const detail = await portalApi.getQuotation(id);
+      setQuotation(detail);
+      if (detail.lines && detail.lines.length > 0) {
+        setSelectedLineId(detail.lines[0].id);
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.error?.message || 'Failed to switch quotation');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Fetch or initialize customer quotation
   useEffect(() => {
     const fetchPortalData = async () => {
@@ -75,8 +92,9 @@ export const CustomerPortalPage: React.FC<CustomerPortalPageProps> = ({
           token = await requestPortalAccess(portalCustomerEmail || 'deals@apexenterprises.com');
         }
 
-        // Get quotations available
+        // Get quotations available for this specific customer
         const list = await portalApi.getQuotations();
+        setQuotationsList(list || []);
         if (list && list.length > 0) {
           const detail = await portalApi.getQuotation(list[0].id);
           setQuotation(detail);
@@ -84,15 +102,7 @@ export const CustomerPortalPage: React.FC<CustomerPortalPageProps> = ({
             setSelectedLineId(detail.lines[0].id);
           }
         } else {
-          // Fallback to finding sample quotation id from public list
-          const internalList = await quotationsApi.list();
-          if (internalList.length > 0) {
-            const sample = await portalApi.getQuotation(internalList[0].id);
-            setQuotation(sample);
-            if (sample.lines && sample.lines.length > 0) {
-              setSelectedLineId(sample.lines[0].id);
-            }
-          }
+          setQuotation(null);
         }
       } catch (err: any) {
         console.error('Portal error:', err);
@@ -234,17 +244,52 @@ export const CustomerPortalPage: React.FC<CustomerPortalPageProps> = ({
       {/* Screen Identifier Header */}
       <div className="p-6 border-b border-slate-100 flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-sm">
+          <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow-sm">
             11
           </div>
           <div>
-            <h2 className="text-xl font-bold text-slate-900">Customer Deal Room</h2>
-            <p className="text-xs text-slate-500">Apex Enterprises Negotiation &amp; Terms Review</p>
+            <div className="flex items-center space-x-2">
+              <h2 className="text-xl font-bold text-slate-900">Customer Deal Room</h2>
+              {quotation?.customer?.tier && (
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider border ${
+                    quotation.customer.tier === 'GOLD'
+                      ? 'bg-amber-100 text-amber-800 border-amber-300'
+                      : quotation.customer.tier === 'SILVER'
+                      ? 'bg-slate-200 text-slate-800 border-slate-300'
+                      : 'bg-orange-100 text-orange-800 border-orange-300'
+                  }`}
+                >
+                  {quotation.customer.tier} Tier
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-500">
+              {quotation?.customer?.name || portalCustomerEmail || 'Customer'} Negotiation &amp; Terms Review
+            </p>
           </div>
         </div>
 
-        {/* Sub Navigation */}
-        <div className="flex items-center space-x-2 bg-slate-100 p-1 rounded-lg">
+        {/* Sub Navigation & Quotation Switcher */}
+        <div className="flex flex-wrap items-center gap-3">
+          {quotationsList.length > 1 && (
+            <div className="flex items-center space-x-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-lg shadow-xs">
+              <span className="text-[11px] font-semibold text-slate-500">Switch Deal:</span>
+              <select
+                value={quotation?.id || ''}
+                onChange={(e) => handleSelectQuotation(e.target.value)}
+                className="text-xs font-semibold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
+              >
+                {quotationsList.map((q) => (
+                  <option key={q.id} value={q.id}>
+                    #{q.id.slice(0, 8)} ({q.status.replace(/_/g, ' ')}) - ₹{Number(q.total).toLocaleString()}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div className="flex items-center space-x-2 bg-slate-100 p-1 rounded-lg">
           <button
             onClick={() => handleTabChange('quotation')}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition cursor-pointer ${
@@ -277,6 +322,7 @@ export const CustomerPortalPage: React.FC<CustomerPortalPageProps> = ({
           </button>
         </div>
       </div>
+    </div>
 
       <div className="p-8 max-w-4xl mx-auto">
         {/* ================= VIEW 1: QUOTATION & TERMS ================= */}
@@ -597,8 +643,12 @@ export const CustomerPortalPage: React.FC<CustomerPortalPageProps> = ({
                     <Building2 className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-slate-900">Apex Enterprises Inc.</h4>
-                    <p className="text-xs text-slate-500 font-mono">Account ID: CUST-APEX-001</p>
+                    <h4 className="font-bold text-slate-900">
+                      {quotation?.customer?.name || 'Authorized Client'}
+                    </h4>
+                    <p className="text-xs text-slate-500 font-mono">
+                      Account ID: {quotation?.customer?.id ? `CUST-${quotation.customer.id.slice(0, 8).toUpperCase()}` : 'CUST-001'}
+                    </p>
                   </div>
                 </div>
 
@@ -606,22 +656,42 @@ export const CustomerPortalPage: React.FC<CustomerPortalPageProps> = ({
                   <div className="flex justify-between py-1.5">
                     <span className="text-slate-500">Authorized Contact:</span>
                     <span className="font-mono font-semibold text-slate-800">
-                      {portalCustomerEmail || 'deals@apexenterprises.com'}
+                      {portalCustomerEmail || quotation?.customer?.email || 'customer@enterprise.com'}
                     </span>
                   </div>
                   <div className="flex justify-between py-1.5">
                     <span className="text-slate-500">Tier Level:</span>
-                    <span className="font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
-                      GOLD (Tier 1 Strategic)
+                    <span
+                      className={`font-bold px-2 py-0.5 rounded-full ${
+                        quotation?.customer?.tier === 'GOLD'
+                          ? 'text-amber-700 bg-amber-100'
+                          : quotation?.customer?.tier === 'SILVER'
+                          ? 'text-slate-700 bg-slate-200'
+                          : 'text-orange-700 bg-orange-100'
+                      }`}
+                    >
+                      {quotation?.customer?.tier || 'BRONZE'} Tier
                     </span>
                   </div>
                   <div className="flex justify-between py-1.5">
                     <span className="text-slate-500">Auto-Approved Discount Ceiling:</span>
-                    <span className="font-bold text-emerald-700">15% Max Ceiling</span>
+                    <span className="font-bold text-emerald-700">
+                      {quotation?.customer?.tier === 'GOLD'
+                        ? '15% Max Ceiling'
+                        : quotation?.customer?.tier === 'SILVER'
+                        ? '12% Max Ceiling'
+                        : '8% Max Ceiling'}
+                    </span>
                   </div>
                   <div className="flex justify-between py-1.5">
                     <span className="text-slate-500">Payment Terms:</span>
-                    <span className="font-semibold text-slate-800">Net 30 Days</span>
+                    <span className="font-semibold text-slate-800">
+                      {quotation?.customer?.tier === 'GOLD'
+                        ? 'Net 30 Days'
+                        : quotation?.customer?.tier === 'SILVER'
+                        ? 'Net 45 Days'
+                        : 'Net 15 Days'}
+                    </span>
                   </div>
                 </div>
               </div>

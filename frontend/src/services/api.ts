@@ -45,8 +45,8 @@ export const authApi = {
     const res = await api.post<{ token: string; user: User }>('/auth/signup', data);
     return res.data;
   },
-  portalMagicLink: async (email: string) => {
-    const res = await api.post<{ magicLinkToken: string }>('/auth/portal-magic-link', { email });
+  portalMagicLink: async (email: string, password?: string) => {
+    const res = await api.post<{ magicLinkToken: string }>('/auth/portal-magic-link', { email, password });
     return res.data;
   },
   getMe: async () => {
