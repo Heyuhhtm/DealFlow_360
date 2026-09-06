@@ -248,8 +248,8 @@ export const fulfillmentApi = {
 
 // Subscription Billing API
 export const billingApi = {
-  generateSchedule: async (quotationId: string) => {
-    const res = await api.post(`/quotations/${quotationId}/billing/generate-schedule`);
+  generateSchedule: async (quotationId: string, installmentsCount?: number) => {
+    const res = await api.post(`/quotations/${quotationId}/billing/generate-schedule`, { installmentsCount });
     return res.data;
   },
   getBilling: async (quotationId: string) => {
@@ -258,6 +258,19 @@ export const billingApi = {
   },
   updateLine: async (quotationId: string, lineId: string, quantity: number) => {
     const res = await api.patch(`/quotations/${quotationId}/billing/lines/${lineId}`, { quantity });
+    return res.data;
+  },
+  getInstallmentPdf: async (quotationId: string, billingId: string, disposition: 'view' | 'download' = 'view') => {
+    const res = await api.get(`/quotations/${quotationId}/billing/installments/${billingId}/pdf`, {
+      params: { disposition },
+      responseType: 'blob',
+    });
+    return res.data as Blob;
+  },
+  sendReminder: async (quotationId: string, billingId: string) => {
+    const res = await api.post<{ success: boolean; message: string; previewUrl: string; messageId: string }>(
+      `/quotations/${quotationId}/billing/installments/${billingId}/send-reminder`
+    );
     return res.data;
   },
 };

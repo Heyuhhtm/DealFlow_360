@@ -21,6 +21,8 @@ import {
   generateBillingSchedule,
   getBilling,
   updateBillingLine,
+  getInstallmentPdf,
+  sendInstallmentReminder,
 } from '../controllers/billing.controller';
 import { requireAuth } from '../middleware/auth.middleware';
 import { asyncHandler } from '../lib/errors';
@@ -58,5 +60,7 @@ router.get('/:id/fulfillment', asyncHandler(getFulfillment));
 router.post('/:id/billing/generate-schedule', asyncHandler(generateBillingSchedule));
 router.get('/:id/billing', asyncHandler(getBilling));
 router.patch('/:id/billing/lines/:lineId', asyncHandler(updateBillingLine));
+router.get('/:id/billing/installments/:billingId/pdf', asyncHandler(getInstallmentPdf));
+router.post('/:id/billing/installments/:billingId/send-reminder', asyncHandler(sendInstallmentReminder));
 
 export default router;

@@ -494,10 +494,10 @@ export const QuotationsPage: React.FC = () => {
                   <td className="py-4 px-6">
                     <span
                       className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${quote.customerTier === 'GOLD'
-                          ? 'bg-amber-100 text-amber-800'
-                          : quote.customerTier === 'SILVER'
-                            ? 'bg-slate-200 text-slate-700'
-                            : 'bg-orange-100 text-orange-800'
+                        ? 'bg-amber-100 text-amber-800'
+                        : quote.customerTier === 'SILVER'
+                          ? 'bg-slate-200 text-slate-700'
+                          : 'bg-orange-100 text-orange-800'
                         }`}
                     >
                       {quote.customerTier}
@@ -531,10 +531,10 @@ export const QuotationsPage: React.FC = () => {
                   <td className="py-4 px-6">
                     <span
                       className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold ${quote.blendedRiskScore > 5
-                          ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                          : quote.blendedRiskScore > 0
-                            ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                            : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                        : quote.blendedRiskScore > 0
+                          ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                          : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                         }`}
                     >
                       {quote.blendedRiskScore.toFixed(1)}%
@@ -615,10 +615,10 @@ export const QuotationsPage: React.FC = () => {
                         </span>
                         <span
                           className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${quote.customerTier === 'GOLD'
-                              ? 'bg-amber-100 text-amber-800'
-                              : quote.customerTier === 'SILVER'
-                                ? 'bg-slate-200 text-slate-700'
-                                : 'bg-orange-100 text-orange-800'
+                            ? 'bg-amber-100 text-amber-800'
+                            : quote.customerTier === 'SILVER'
+                              ? 'bg-slate-200 text-slate-700'
+                              : 'bg-orange-100 text-orange-800'
                             }`}
                         >
                           {quote.customerTier}
@@ -659,10 +659,10 @@ export const QuotationsPage: React.FC = () => {
                           <span className="text-[10px] text-slate-400 block uppercase">Risk</span>
                           <span
                             className={`text-xs font-mono font-bold px-1.5 py-0.5 rounded ${quote.blendedRiskScore > 5
-                                ? 'bg-rose-50 text-rose-700'
-                                : quote.blendedRiskScore > 0
-                                  ? 'bg-amber-50 text-amber-700'
-                                  : 'bg-emerald-50 text-emerald-700'
+                              ? 'bg-rose-50 text-rose-700'
+                              : quote.blendedRiskScore > 0
+                                ? 'bg-amber-50 text-amber-700'
+                                : 'bg-emerald-50 text-emerald-700'
                               }`}
                           >
                             {quote.blendedRiskScore.toFixed(1)}%
@@ -771,11 +771,10 @@ export const QuotationsPage: React.FC = () => {
                             key={preset}
                             type="button"
                             onClick={() => handleApplyOrderDiscount(preset)}
-                            className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border transition ${
-                              orderDiscount === preset
+                            className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border transition ${orderDiscount === preset
                                 ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
                                 : 'bg-white hover:bg-blue-100 text-blue-800 border-blue-200'
-                            }`}
+                              }`}
                           >
                             {preset}%
                           </button>
@@ -810,8 +809,8 @@ export const QuotationsPage: React.FC = () => {
                           <div
                             key={idx}
                             className={`p-4 rounded-xl border transition ${isExceeding
-                                ? 'bg-amber-50/50 border-amber-200'
-                                : 'bg-slate-50 border-slate-200'
+                              ? 'bg-amber-50/50 border-amber-200'
+                              : 'bg-slate-50 border-slate-200'
                               }`}
                           >
                             <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
@@ -864,8 +863,8 @@ export const QuotationsPage: React.FC = () => {
                                       )
                                     }
                                     className={`w-full px-3 py-2 bg-white border rounded-lg text-xs font-bold ${isExceeding
-                                        ? 'border-amber-400 text-amber-700'
-                                        : 'border-slate-300 text-slate-800'
+                                      ? 'border-amber-400 text-amber-700'
+                                      : 'border-slate-300 text-slate-800'
                                       }`}
                                     placeholder="Discount %"
                                   />
@@ -933,10 +932,10 @@ export const QuotationsPage: React.FC = () => {
                         <span className="text-xs text-blue-200 block">Blended Risk Score</span>
                         <span
                           className={`text-2xl font-black ${liveBlendedRisk > 5
-                              ? 'text-rose-400'
-                              : liveBlendedRisk > 0
-                                ? 'text-amber-300'
-                                : 'text-emerald-400'
+                            ? 'text-rose-400'
+                            : liveBlendedRisk > 0
+                              ? 'text-amber-300'
+                              : 'text-emerald-400'
                             }`}
                         >
                           {liveBlendedRisk.toFixed(1)}%
@@ -1069,8 +1068,8 @@ export const QuotationsPage: React.FC = () => {
 
       {/* DETAILED QUOTATION VIEW MODAL */}
       {selectedQuotation && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-4xl w-full p-8 shadow-2xl border border-slate-200 my-8 space-y-6">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-start justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-4xl w-full p-8 shadow-2xl border border-slate-200 my-8 space-y-6 max-h-[90vh] overflow-y-auto">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-slate-100 gap-4">
               <div>
                 <div className="flex items-center space-x-3">

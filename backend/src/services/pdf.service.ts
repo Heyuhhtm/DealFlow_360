@@ -369,3 +369,285 @@ export const generateQuotationPDF = async (
     }
   });
 };
+
+export interface InstallmentInvoiceData {
+  quotationId: string;
+  billingId: string;
+  customer: {
+    name: string;
+    email: string;
+    tier?: string;
+  };
+  productName: string;
+  billingCycle: string;
+  installmentNumber: number;
+  totalInstallments: number;
+  dueDate: string | Date;
+  amount: number;
+}
+
+export const generateInstallmentInvoicePDF = async (
+  data: InstallmentInvoiceData
+): Promise<Buffer> => {
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({ margin: 40, size: 'A4' });
+      const buffers: Buffer[] = [];
+
+      doc.on('data', (chunk) => buffers.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(buffers)));
+      doc.on('error', (err) => reject(err));
+
+      const formatCurrency = (val: number) => {
+        return `INR ${Number(val || 0).toLocaleString('en-IN', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}`;
+      };
+
+      const refId = data.quotationId.slice(0, 8).toUpperCase();
+      const invoiceNo = `INV-EMI-${data.billingId ? data.billingId.slice(0, 8).toUpperCase() : refId}`;
+      const dueDateStr = new Date(data.dueDate).toLocaleDateString('en-IN', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+
+      // 1. BRAND HEADER
+      doc.rect(40, 40, 515, 65).fill('#0B2B68');
+
+      doc
+        .fillColor('#FFFFFF')
+        .fontSize(22)
+        .font('Helvetica-Bold')
+        .text('DealFlow360', 55, 52);
+
+      doc
+        .fontSize(9)
+        .font('Helvetica')
+        .fillColor('#93C5FD')
+        .text('Enterprise Subscription & Recurring Billing Operations', 55, 78);
+
+      doc
+        .fontSize(13)
+        .font('Helvetica-Bold')
+        .fillColor('#FFFFFF')
+        .text('INSTALLMENT INVOICE (EMI)', 310, 52, { align: 'right', width: 230 });
+
+      doc
+        .fontSize(9)
+        .font('Helvetica')
+        .fillColor('#E2E8F0')
+        .text(`Invoice: ${invoiceNo}`, 310, 70, { align: 'right', width: 230 });
+
+      doc
+        .fontSize(8)
+        .font('Helvetica')
+        .fillColor('#93C5FD')
+        .text(`Ref Quote: #${refId}`, 310, 84, { align: 'right', width: 230 });
+
+      // 2. METADATA & RECIPIENT
+      const infoY = 125;
+      doc.rect(40, infoY, 515, 80).fill('#F8FAFC');
+      doc.rect(40, infoY, 515, 80).stroke('#E2E8F0');
+
+      // Left Column: Customer
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(9)
+        .fillColor('#64748B')
+        .text('BILLED TO (CUSTOMER):', 55, infoY + 12);
+
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(11)
+        .fillColor('#0F172A')
+        .text(data.customer.name, 55, infoY + 26);
+
+      doc
+        .font('Helvetica')
+        .fontSize(9)
+        .fillColor('#475569')
+        .text(data.customer.email, 55, infoY + 41);
+
+      if (data.customer.tier) {
+        doc
+          .font('Helvetica-Bold')
+          .fontSize(8)
+          .fillColor('#0B2B68')
+          .text(`Account Tier: ${data.customer.tier}`, 55, infoY + 56);
+      }
+
+      // Right Column: Installment Details
+      const rightColX = 330;
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(9)
+        .fillColor('#64748B')
+        .text('BILLING DETAILS:', rightColX, infoY + 12);
+
+      doc
+        .font('Helvetica')
+        .fontSize(9)
+        .fillColor('#334155')
+        .text(`Installment: #${data.installmentNumber} of ${data.totalInstallments} (${data.billingCycle})`, rightColX, infoY + 26);
+
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(9)
+        .fillColor('#B45309')
+        .text(`Due Date: ${dueDateStr}`, rightColX, infoY + 41);
+
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(9)
+        .fillColor('#059669')
+        .text(`Status: SCHEDULED / DUE`, rightColX, infoY + 56);
+
+      // 3. LINE ITEM TABLE
+      const tableTop = 230;
+      doc.rect(40, tableTop, 515, 24).fill('#0B2B68');
+
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(9)
+        .fillColor('#FFFFFF')
+        .text('DESCRIPTION / PRODUCT', 50, tableTop + 7)
+        .text('CADENCE', 250, tableTop + 7)
+        .text('INSTALLMENT', 350, tableTop + 7)
+        .text('AMOUNT (INR)', 440, tableTop + 7, { align: 'right', width: 100 });
+
+      // Row 1
+      const rowY = tableTop + 24;
+      doc.rect(40, rowY, 515, 32).fill('#FFFFFF');
+      doc.rect(40, rowY, 515, 32).stroke('#E2E8F0');
+
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(9)
+        .fillColor('#0F172A')
+        .text(data.productName, 50, rowY + 7);
+
+      doc
+        .font('Helvetica')
+        .fontSize(8)
+        .fillColor('#64748B')
+        .text(`Recurring SaaS / SLA Subscription`, 50, rowY + 18);
+
+      doc
+        .font('Helvetica')
+        .fontSize(9)
+        .fillColor('#334155')
+        .text(data.billingCycle, 250, rowY + 10);
+
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(9)
+        .fillColor('#0B2B68')
+        .text(`#${data.installmentNumber} of ${data.totalInstallments}`, 350, rowY + 10);
+
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(10)
+        .fillColor('#0F172A')
+        .text(formatCurrency(data.amount), 440, rowY + 10, { align: 'right', width: 100 });
+
+      // 4. TOTAL SUMMARY BLOCK
+      const sumY = rowY + 45;
+      doc.rect(300, sumY, 255, 60).fill('#F1F5F9');
+      doc.rect(300, sumY, 255, 60).stroke('#CBD5E1');
+
+      doc
+        .font('Helvetica')
+        .fontSize(9)
+        .fillColor('#475569')
+        .text('Installment Net:', 315, sumY + 10)
+        .text(formatCurrency(data.amount), 430, sumY + 10, { align: 'right', width: 110 });
+
+      doc
+        .font('Helvetica')
+        .fontSize(9)
+        .fillColor('#475569')
+        .text('Applicable Tax (GST @ 0% Included):', 315, sumY + 24)
+        .text('INR 0.00', 430, sumY + 24, { align: 'right', width: 110 });
+
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(11)
+        .fillColor('#0B2B68')
+        .text('Total Due This Cycle:', 315, sumY + 40)
+        .text(formatCurrency(data.amount), 430, sumY + 40, { align: 'right', width: 110 });
+
+      // 5. PAYMENT INSTRUCTIONS & DUE DATE ALERT
+      const noticeY = sumY + 80;
+      doc.rect(40, noticeY, 515, 65).fill('#FEF3C7');
+      doc.rect(40, noticeY, 515, 65).stroke('#FDE68A');
+
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(9)
+        .fillColor('#92400E')
+        .text('⚠️ PAYMENT DUE DATE NOTICE', 55, noticeY + 10);
+
+      doc
+        .font('Helvetica')
+        .fontSize(8.5)
+        .fillColor('#78350F')
+        .text(
+          `This installment is scheduled for payment on or before ${dueDateStr}. To ensure uninterrupted subscription services and SLA priority support, please complete remittance via your Customer Deal Room portal or corporate wire transfer.`,
+          55,
+          noticeY + 24,
+          { width: 485, lineGap: 2 }
+        );
+
+      // Bank Transfer Details
+      const bankY = noticeY + 80;
+      doc.rect(40, bankY, 515, 65).fill('#F8FAFC');
+      doc.rect(40, bankY, 515, 65).stroke('#E2E8F0');
+
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(9)
+        .fillColor('#0F172A')
+        .text('REMITTANCE / WIRE TRANSFER DETAILS:', 55, bankY + 10);
+
+      doc
+        .font('Helvetica')
+        .fontSize(8)
+        .fillColor('#475569')
+        .text('Bank Name: HDFC Bank Ltd • Account Name: DealFlow360 Technologies Private Limited', 55, bankY + 25)
+        .text('Account Number: 50200088912345 • IFSC Code: HDFC0001234 • SWIFT: HDFCINBB', 55, bankY + 38)
+        .text(`Reference Remark: Please include "${invoiceNo}" in your transfer description.`, 55, bankY + 51);
+
+      // 6. FOOTER
+      const footerY = 760;
+      doc.rect(40, footerY - 10, 515, 1).fill('#E2E8F0');
+
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(8)
+        .fillColor('#0B2B68')
+        .text('DealFlow360 • Automated Subscription & EMI Invoicing', 40, footerY, { align: 'center', width: 515 });
+
+      const nowStr = new Date().toLocaleString('en-IN', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      });
+
+      doc
+        .font('Helvetica')
+        .fontSize(7)
+        .fillColor('#94A3B8')
+        .text(
+          `Generated on ${nowStr} • Document: ${invoiceNo} • Authorized Commercial Billing`,
+          40,
+          footerY + 12,
+          { align: 'center', width: 515 }
+        );
+
+      doc.end();
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
