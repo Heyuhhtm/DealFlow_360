@@ -499,6 +499,6 @@ The following capabilities represent deliberate scope decisions for the hackatho
 
 ## 13. Team & Credits
 
-- **Developer**: Uttam Kumar (`Heyuhhtm`)
+- **Developer**: Uttam Kumar Gupta {(uttamgupta86039@gmail.com (`Heyuhhtm`)} && Ranjan Kumar ..
 - **Project**: DealFlow360 B2B Commercial Sales Orchestration Platform
 - **Event**: Built with precision for the **Odoo Combat Hackathon 2026**.
